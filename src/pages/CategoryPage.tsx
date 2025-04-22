@@ -1,13 +1,13 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import ImageAccordion from '@/components/ImageAccordion';
 import ProductGrid from '@/components/ProductGrid';
 import { Product } from '@/components/ProductCard';
 
-const HomePage = () => {
-  // Sample product data (will be replaced with actual data from Supabase)
-  const sampleProducts: Product[] = [
+// This is a temporary mock data function, will be replaced with Supabase data
+const getProductsByCategory = (category: string): Product[] => {
+  const allProducts: Product[] = [
     {
       id: "1",
       name: "Sonoff MINI R2",
@@ -82,14 +82,42 @@ const HomePage = () => {
     },
   ];
 
+  return allProducts.filter(product => product.category === category);
+};
+
+// Map category IDs to display names
+const categoryNames: Record<string, string> = {
+  'wifi': 'Modules WiFi',
+  'zigbee': 'Modules ZigBee',
+  'switch': 'Interrupteurs',
+  'screen': 'Écrans',
+  'accessories': 'Accessoires'
+};
+
+const CategoryPage = () => {
+  const { categoryId } = useParams<{ categoryId: string }>();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categoryName, setCategoryName] = useState('Produits');
+
+  useEffect(() => {
+    if (categoryId) {
+      // This would be a Supabase query in a real app
+      const filteredProducts = getProductsByCategory(categoryId);
+      setProducts(filteredProducts);
+      setCategoryName(categoryNames[categoryId] || 'Produits');
+    }
+  }, [categoryId]);
+
   return (
     <Layout>
-      <ImageAccordion />
       <div className="py-12">
-        <ProductGrid products={sampleProducts} title="Produits Populaires" />
+        <ProductGrid 
+          products={products} 
+          title={categoryName} 
+        />
       </div>
     </Layout>
   );
 };
 
-export default HomePage;
+export default CategoryPage;
