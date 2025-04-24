@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/components/ui/use-toast';
 
 export interface Product {
   id: string;
@@ -22,15 +23,22 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) => {
   const { addToCart } = useCart();
+  const { toast } = useToast();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     addToCart(product);
+    
+    toast({
+      title: "Produit ajouté au panier",
+      description: `${product.name} a été ajouté à votre panier`,
+    });
   };
 
   return (
-    <div className="product-card">
-      <Link to={`/product/${product.id}`}>
+    <div className="product-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+      <Link to={`/product/${product.id}`} className="block">
         <div className="h-48 overflow-hidden">
           <img 
             src={product.imageUrl} 
@@ -55,13 +63,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
           )}
         </div>
 
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col gap-2">
           <Button 
             className="w-full bg-sonoff-blue hover:bg-sonoff-teal"
             onClick={handleAddToCart}
           >
             <ShoppingCart className="mr-2 h-4 w-4" /> Ajouter au panier
           </Button>
+          <Link to="/checkout">
+            <Button 
+              variant="outline" 
+              className="w-full border-sonoff-blue text-sonoff-blue hover:bg-sonoff-blue hover:text-white"
+            >
+              Achat immédiat
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

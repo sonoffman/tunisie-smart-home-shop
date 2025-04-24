@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Trash, Plus, Minus, ArrowRight } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
 
 const CartPage = () => {
   const { cartItems, updateQuantity, removeFromCart, totalAmount } = useCart();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleQuantityChange = (id: string, amount: number, currentQuantity: number) => {
     const newQuantity = currentQuantity + amount;
@@ -20,6 +22,14 @@ const CartPage = () => {
   };
 
   const handleCheckout = () => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "Panier vide",
+        description: "Votre panier est vide. Ajoutez des produits avant de passer à la commande.",
+        variant: "destructive"
+      });
+      return;
+    }
     navigate('/checkout');
   };
 
@@ -55,19 +65,19 @@ const CartPage = () => {
               </CardHeader>
               <CardContent className="divide-y">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="py-4 flex items-center">
-                    <div className="h-20 w-20 rounded overflow-hidden mr-4">
+                  <div key={item.id} className="py-4 flex flex-col sm:flex-row sm:items-center">
+                    <div className="h-20 w-20 rounded overflow-hidden mr-4 mb-3 sm:mb-0">
                       <img 
                         src={item.imageUrl} 
                         alt={item.name} 
                         className="h-full w-full object-cover" 
                       />
                     </div>
-                    <div className="flex-grow">
+                    <div className="flex-grow mb-3 sm:mb-0">
                       <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-gray-500">Prix: {item.price.toFixed(2)} DT</p>
+                      <p className="text-sm text-gray-500">Prix unitaire: {item.price.toFixed(2)} DT</p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 mb-3 sm:mb-0">
                       <Button 
                         variant="outline" 
                         size="icon" 
@@ -92,12 +102,12 @@ const CartPage = () => {
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <div className="text-right ml-4">
+                    <div className="text-right sm:ml-4 flex justify-between sm:flex-col sm:justify-start">
                       <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} DT</p>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="text-red-500 h-8 w-8 mt-1"
+                        className="text-red-500 h-8 w-8 sm:mt-1"
                         onClick={() => removeFromCart(item.id)}
                       >
                         <Trash className="h-4 w-4" />
@@ -129,7 +139,7 @@ const CartPage = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex flex-col space-y-2">
-                <Button onClick={handleCheckout} className="w-full">
+                <Button onClick={handleCheckout} className="w-full bg-sonoff-blue hover:bg-sonoff-teal">
                   Passer à la commande <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button variant="outline" onClick={handleContinueShopping} className="w-full">

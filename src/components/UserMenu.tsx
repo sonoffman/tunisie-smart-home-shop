@@ -19,6 +19,10 @@ export function UserMenu() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Debug output to diagnose the issue
+  console.log("UserMenu rendering - User:", user?.email);
+  console.log("UserMenu rendering - Is Admin:", isAdmin);
+
   if (!user) {
     return (
       <>
@@ -32,7 +36,7 @@ export function UserMenu() {
   }
 
   return (
-    <>
+    <div className="flex items-center">
       {isAdmin && (
         <Button 
           variant="ghost" 
@@ -70,6 +74,6 @@ export function UserMenu() {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </>
+    </div>
   );
 }

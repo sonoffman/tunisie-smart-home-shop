@@ -18,6 +18,18 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { useCart } from '@/contexts/CartContext';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+
+const checkoutSchema = z.object({
+  fullName: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
+  phone: z.string().min(8, "Le numéro de téléphone doit contenir au moins 8 chiffres"),
+  address: z.string().min(10, "L'adresse doit être complète (au moins 10 caractères)")
+});
+
+type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 const CheckoutPage = () => {
   const { user } = useAuth();
@@ -25,37 +37,25 @@ const CheckoutPage = () => {
   const { toast } = useToast();
   const { cartItems, totalAmount, clearCart } = useCart();
   const [processing, setProcessing] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    phone: '',
-    address: ''
-  });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  const form = useForm<CheckoutFormValues>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      fullName: '',
+      phone: '',
+      address: ''
+    }
+  });
 
   const handleContinueShopping = () => {
     navigate('/');
   };
 
-  const handleSubmitOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const onSubmit = async (data: CheckoutFormValues) => {
     if (cartItems.length === 0) {
       toast({
         title: "Erreur",
         description: "Votre panier est vide",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.fullName || !formData.phone || !formData.address) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs obligatoires",
         variant: "destructive",
       });
       return;
@@ -70,9 +70,9 @@ const CheckoutPage = () => {
         .insert([
           {
             user_id: user?.id || null,
-            customer_name: formData.fullName,
-            customer_phone: formData.phone,
-            customer_address: formData.address,
+            customer_name: data.fullName,
+            customer_phone: data.phone,
+            customer_address: data.address,
             total_amount: totalAmount,
             status: 'new'
           }
@@ -101,7 +101,7 @@ const CheckoutPage = () => {
       const { data: issueData, error: issueError } = await supabase
         .from('customer_issues')
         .select('id')
-        .eq('customer_phone', formData.phone)
+        .eq('customer_phone', data.phone)
         .eq('resolved', false);
 
       if (issueError) throw issueError;
@@ -109,7 +109,7 @@ const CheckoutPage = () => {
       // If customer has unresolved issues, show a warning to the admin
       if (issueData && issueData.length > 0) {
         // In a real app, this might trigger a notification to admins
-        console.log(`Warning: Customer with phone ${formData.phone} has unresolved issues`);
+        console.log(`Warning: Customer with phone ${data.phone} has unresolved issues`);
       }
 
       toast({
@@ -188,62 +188,70 @@ const CheckoutPage = () => {
                   Complétez vos informations pour finaliser la commande
                 </CardDescription>
               </CardHeader>
-              <form onSubmit={handleSubmitOrder}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Nom complet *</Label>
-                    <Input
-                      id="fullName"
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
                       name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      placeholder="Votre nom complet"
-                      required
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nom complet *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Votre nom complet" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Téléphone *</Label>
-                    <Input
-                      id="phone"
+                    
+                    <FormField
+                      control={form.control}
                       name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="Votre numéro de téléphone"
-                      required
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Téléphone *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Votre numéro de téléphone" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Adresse de livraison *</Label>
-                    <Textarea
-                      id="address"
+                    
+                    <FormField
+                      control={form.control}
                       name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      placeholder="Votre adresse complète"
-                      required
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Adresse de livraison *</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Votre adresse complète" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </div>
-                </CardContent>
-                <CardFooter className="flex flex-col space-y-2">
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    disabled={processing || cartItems.length === 0}
-                  >
-                    {processing ? 'Traitement...' : 'Finaliser la commande'}
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={handleContinueShopping}
-                  >
-                    Continuer mes achats
-                  </Button>
-                </CardFooter>
-              </form>
+                  </CardContent>
+                  <CardFooter className="flex flex-col space-y-2">
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-sonoff-blue hover:bg-sonoff-teal" 
+                      disabled={processing || cartItems.length === 0}
+                    >
+                      {processing ? 'Traitement...' : 'Finaliser la commande'}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={handleContinueShopping}
+                    >
+                      Continuer mes achats
+                    </Button>
+                  </CardFooter>
+                </form>
+              </Form>
             </Card>
           </div>
         </div>
