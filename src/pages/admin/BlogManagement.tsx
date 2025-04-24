@@ -163,7 +163,17 @@ const BlogManagement = () => {
       let result;
       
       if (isNew) {
-        result = await supabase.from('blog_posts').insert([postData]);
+        // Correction: Ensure all required fields are present
+        const newPost = {
+          title: postData.title || '',
+          slug: processedSlug,
+          content: postData.content || '',
+          featured_image: postData.featured_image || null,
+          published: postData.published !== undefined ? postData.published : true,
+          author_id: user?.id
+        };
+        
+        result = await supabase.from('blog_posts').insert([newPost]);
       } else {
         result = await supabase
           .from('blog_posts')
@@ -310,12 +320,11 @@ const BlogManagement = () => {
                   <DialogClose asChild>
                     <Button variant="outline">Annuler</Button>
                   </DialogClose>
-                  <DialogClose asChild>
-                    {({ close }) => (
-                      <Button onClick={() => handleSave(close)}>
-                        {isNew ? 'Créer' : 'Mettre à jour'}
-                      </Button>
-                    )}
+                  <DialogClose>
+                    {/* Corrected DialogClose format */}
+                    <Button onClick={() => handleSave(() => {})}>
+                      {isNew ? 'Créer' : 'Mettre à jour'}
+                    </Button>
                   </DialogClose>
                 </div>
               </DialogContent>
@@ -373,7 +382,11 @@ const BlogManagement = () => {
                       <div className="flex justify-end gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
-                            <Button variant="outline" size="icon">
+                            <Button 
+                              variant="outline" 
+                              size="icon"
+                              onClick={() => handleOpenDialog(post)}
+                            >
                               <Pencil className="h-4 w-4" />
                             </Button>
                           </DialogTrigger>
@@ -441,12 +454,11 @@ const BlogManagement = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose asChild>
-                                {({ close }) => (
-                                  <Button onClick={() => handleSave(close)}>
-                                    Mettre à jour
-                                  </Button>
-                                )}
+                              <DialogClose>
+                                {/* Corrected DialogClose format */}
+                                <Button onClick={() => handleSave(() => {})}>
+                                  Mettre à jour
+                                </Button>
                               </DialogClose>
                             </div>
                           </DialogContent>
@@ -469,12 +481,11 @@ const BlogManagement = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose asChild>
-                                {({ close }) => (
-                                  <Button variant="destructive" onClick={() => handleDelete(post, close)}>
-                                    Supprimer
-                                  </Button>
-                                )}
+                              <DialogClose>
+                                {/* Corrected DialogClose format */}
+                                <Button variant="destructive" onClick={() => handleDelete(post, () => {})}>
+                                  Supprimer
+                                </Button>
                               </DialogClose>
                             </div>
                           </DialogContent>

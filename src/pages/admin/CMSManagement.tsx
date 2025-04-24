@@ -237,12 +237,11 @@ const CMSManagement = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose asChild>
-                                {({ close }) => (
-                                  <Button onClick={() => handleSave(close)}>
-                                    Mettre à jour
-                                  </Button>
-                                )}
+                              <DialogClose>
+                                {/* Corrected DialogClose format */}
+                                <Button onClick={() => handleSave(() => {})}>
+                                  Mettre à jour
+                                </Button>
                               </DialogClose>
                             </div>
                           </DialogContent>

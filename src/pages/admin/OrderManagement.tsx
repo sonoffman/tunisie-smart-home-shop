@@ -286,7 +286,7 @@ const OrderManagement = () => {
                       {order.customer_name}
                       {order.has_customer_issues && (
                         <span className="ml-2 inline-flex items-center">
-                          <AlertTriangle className="h-4 w-4 text-amber-500" title="Client avec problème signalé" />
+                          <AlertTriangle className="h-4 w-4 text-amber-500" aria-label="Client avec problème signalé" />
                         </span>
                       )}
                     </TableCell>
@@ -414,7 +414,7 @@ const OrderManagement = () => {
                                           <DialogClose asChild>
                                             <Button variant="outline">Annuler</Button>
                                           </DialogClose>
-                                          <DialogClose asChild>
+                                          <DialogClose>
                                             <Button 
                                               variant="destructive" 
                                               onClick={() => handleStatusChange(currentOrder.id, 'cancelled', cancellationReason)}

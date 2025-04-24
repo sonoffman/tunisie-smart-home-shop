@@ -27,6 +27,10 @@ const CMSPage = () => {
 
   const fetchCMSPage = async () => {
     try {
+      if (!slug) {
+        throw new Error('Slug parameter is missing');
+      }
+      
       const { data, error } = await supabase
         .from('cms_pages')
         .select('*')
