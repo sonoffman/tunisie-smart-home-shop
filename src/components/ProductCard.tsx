@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
 export interface Product {
   id: string;
@@ -20,6 +21,13 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) => {
+  const { addToCart } = useCart();
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    addToCart(product);
+  };
+
   return (
     <div className="product-card">
       <Link to={`/product/${product.id}`}>
@@ -48,7 +56,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
         </div>
 
         <div className="mt-4">
-          <Button className="w-full bg-sonoff-blue hover:bg-sonoff-teal">
+          <Button 
+            className="w-full bg-sonoff-blue hover:bg-sonoff-teal"
+            onClick={handleAddToCart}
+          >
             <ShoppingCart className="mr-2 h-4 w-4" /> Ajouter au panier
           </Button>
         </div>

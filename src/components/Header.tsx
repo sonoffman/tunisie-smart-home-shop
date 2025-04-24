@@ -4,12 +4,15 @@ import { Link } from 'react-router-dom';
 import { Search, ShoppingCart, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import MobileMenu from './MobileMenu';
 import { UserMenu } from './UserMenu';
+import { useCart } from '@/contexts/CartContext';
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { totalItems } = useCart();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,8 +69,13 @@ const Header = () => {
           {/* User Account & Cart */}
           <div className="flex items-center space-x-4">
             <UserMenu />
-            <Link to="/cart" className="text-sonoff-blue hover:text-sonoff-orange transition-colors">
+            <Link to="/cart" className="text-sonoff-blue hover:text-sonoff-orange transition-colors relative">
               <ShoppingCart size={24} />
+              {totalItems > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 rounded-full px-1.5 min-w-[20px] h-5 flex items-center justify-center">
+                  {totalItems}
+                </Badge>
+              )}
             </Link>
           </div>
         </div>

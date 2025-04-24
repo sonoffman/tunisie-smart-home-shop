@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
@@ -20,10 +20,11 @@ const CMSPage = () => {
   const [page, setPage] = useState<CMSPage | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const location = useLocation();
 
   useEffect(() => {
     fetchCMSPage();
-  }, [slug]);
+  }, [slug, location]);
 
   const fetchCMSPage = async () => {
     try {

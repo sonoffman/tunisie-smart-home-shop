@@ -17,50 +17,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image?: string;
-}
-
-// Placeholder cart items - in real app, this would come from a cart context/state
-const dummyCartItems: CartItem[] = [
-  {
-    id: '1',
-    name: 'SONOFF BASIC',
-    price: 39.99,
-    quantity: 2,
-    image: 'https://placehold.co/100'
-  },
-  {
-    id: '2',
-    name: 'SONOFF MINI',
-    price: 49.99,
-    quantity: 1,
-    image: 'https://placehold.co/100'
-  }
-];
+import { useCart } from '@/contexts/CartContext';
 
 const CheckoutPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [cartItems] = useState<CartItem[]>(dummyCartItems);
+  const { cartItems, totalAmount, clearCart } = useCart();
   const [processing, setProcessing] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     address: ''
   });
-
-  // Calculate total
-  const totalAmount = cartItems.reduce(
-    (acc, item) => acc + item.price * item.quantity, 
-    0
-  );
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -148,8 +117,10 @@ const CheckoutPage = () => {
         description: "Votre commande a été enregistrée avec succès",
       });
 
-      // Clear cart (in a real app, you'd update your cart state/context here)
-      // For now, just redirect to homepage
+      // Clear cart
+      clearCart();
+      
+      // Redirect to homepage
       navigate('/');
     } catch (error: any) {
       toast({
@@ -184,11 +155,9 @@ const CheckoutPage = () => {
                   <div className="divide-y">
                     {cartItems.map((item) => (
                       <div key={item.id} className="py-4 flex items-center">
-                        {item.image && (
-                          <div className="h-16 w-16 rounded overflow-hidden mr-4">
-                            <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
-                          </div>
-                        )}
+                        <div className="h-16 w-16 rounded overflow-hidden mr-4">
+                          <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
+                        </div>
                         <div className="flex-grow">
                           <h3 className="font-medium">{item.name}</h3>
                           <p className="text-sm text-gray-500">

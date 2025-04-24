@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { CartProvider } from "./contexts/CartContext";
 import Index from "./pages/Index";
 import ProductDetail from "./pages/ProductDetail";
 import CategoryPage from "./pages/CategoryPage";
@@ -15,6 +16,7 @@ import BlogPost from "./pages/BlogPost";
 import CMSPage from "./pages/CMSPage";
 import Profile from "./pages/Profile";
 import CheckoutPage from "./pages/CheckoutPage";
+import CartPage from "./pages/CartPage";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -28,39 +30,39 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/category/:categoryId" element={<CategoryPage />} />
-            <Route path="/verify-product" element={<VerifyProduct />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/profile" element={<Profile />} />
-            
-            {/* CMS Pages */}
-            <Route path="/about" element={<CMSPage />} />
-            <Route path="/terms" element={<CMSPage />} />
-            <Route path="/privacy" element={<CMSPage />} />
-            <Route path="/shipping" element={<CMSPage />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/blog" element={<BlogManagement />} />
-            <Route path="/admin/cms" element={<CMSManagement />} />
-            <Route path="/admin/orders" element={<OrderManagement />} />
-            
-            {/* Catch-all route for 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <CartProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/category/:categoryId" element={<CategoryPage />} />
+              <Route path="/verify-product" element={<VerifyProduct />} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogPost />} />
+              <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/cart" element={<CartPage />} />
+              
+              {/* CMS Pages */}
+              <Route path="/:slug" element={<CMSPage />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/blog" element={<BlogManagement />} />
+              <Route path="/admin/cms" element={<CMSManagement />} />
+              <Route path="/admin/orders" element={<OrderManagement />} />
+              
+              {/* Catch-all route for 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </CartProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
