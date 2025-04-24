@@ -10,6 +10,18 @@ import ProductDetail from "./pages/ProductDetail";
 import CategoryPage from "./pages/CategoryPage";
 import VerifyProduct from "./pages/VerifyProduct";
 import NotFound from "./pages/NotFound";
+import Blog from "./pages/Blog";
+import BlogPost from "./pages/BlogPost";
+import CMSPage from "./pages/CMSPage";
+import Profile from "./pages/Profile";
+import CheckoutPage from "./pages/CheckoutPage";
+
+// Admin Pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import BlogManagement from "./pages/admin/BlogManagement";
+import CMSManagement from "./pages/admin/CMSManagement";
+import OrderManagement from "./pages/admin/OrderManagement";
 
 const queryClient = new QueryClient();
 
@@ -21,11 +33,30 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Index />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/category/:categoryId" element={<CategoryPage />} />
             <Route path="/verify-product" element={<VerifyProduct />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/checkout" element={<CheckoutPage />} />
+            <Route path="/profile" element={<Profile />} />
+            
+            {/* CMS Pages */}
+            <Route path="/about" element={<CMSPage />} />
+            <Route path="/terms" element={<CMSPage />} />
+            <Route path="/privacy" element={<CMSPage />} />
+            <Route path="/shipping" element={<CMSPage />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/blog" element={<BlogManagement />} />
+            <Route path="/admin/cms" element={<CMSManagement />} />
+            <Route path="/admin/orders" element={<OrderManagement />} />
+            
+            {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

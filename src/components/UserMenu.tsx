@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { User, LogOut, Settings } from 'lucide-react';
+import { User, LogOut, Settings, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthModal } from './auth/AuthModal';
 
@@ -32,31 +32,44 @@ export function UserMenu() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost">
-          <User className="h-5 w-5 mr-2" />
-          Mon Compte
+    <>
+      {isAdmin && (
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate('/admin')}
+          className="text-sonoff-blue hover:text-sonoff-orange transition-colors mr-2"
+        >
+          <Shield className="h-5 w-5 mr-2" />
+          Admin
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate('/profile')}>
-          <Settings className="mr-2 h-4 w-4" />
-          Profil
-        </DropdownMenuItem>
-        {isAdmin && (
-          <DropdownMenuItem onClick={() => navigate('/admin')}>
+      )}
+    
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost">
+            <User className="h-5 w-5 mr-2" />
+            Mon Compte
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => navigate('/profile')}>
             <Settings className="mr-2 h-4 w-4" />
-            Administration
+            Profil
           </DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          Déconnexion
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {isAdmin && (
+            <DropdownMenuItem onClick={() => navigate('/admin')}>
+              <Shield className="mr-2 h-4 w-4" />
+              Administration
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem onClick={signOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Déconnexion
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
   );
 }

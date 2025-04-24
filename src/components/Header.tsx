@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, User, ShoppingCart, Menu } from 'lucide-react';
+import { Search, ShoppingCart, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import MobileMenu from './MobileMenu';
+import { UserMenu } from './UserMenu';
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,9 +65,7 @@ const Header = () => {
 
           {/* User Account & Cart */}
           <div className="flex items-center space-x-4">
-            <Link to="/login" className="text-sonoff-blue hover:text-sonoff-orange transition-colors">
-              <User size={24} />
-            </Link>
+            <UserMenu />
             <Link to="/cart" className="text-sonoff-blue hover:text-sonoff-orange transition-colors">
               <ShoppingCart size={24} />
             </Link>
