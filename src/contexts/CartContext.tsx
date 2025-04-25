@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Product } from '@/components/ProductCard';
@@ -23,7 +22,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  // Charger le panier depuis localStorage au montage
+  // Load cart from localStorage on mount
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem('cart');
@@ -38,7 +37,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Sauvegarder le panier dans localStorage à chaque modification
+  // Save cart to localStorage on changes
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
@@ -48,7 +47,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const existingItemIndex = prevItems.findIndex(item => item.id === product.id);
       
       if (existingItemIndex >= 0) {
-        // L'article existe déjà - mettre à jour la quantité
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
@@ -56,7 +54,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         };
         return updatedItems;
       } else {
-        // L'article n'existe pas - ajouter le nouvel article
         return [...prevItems, { ...product, quantity }];
       }
     });

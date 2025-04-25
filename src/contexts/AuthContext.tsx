@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,28 +20,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_user_role', { user_id: userId });
+      
+      if (error) throw error;
+      setIsAdmin(data === 'admin');
+    } catch (error: any) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  };
+
   useEffect(() => {
-    // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         checkAdminStatus(session.user.id);
-      } else {
-        setIsAdmin(false);
       }
       setLoading(false);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        // Utilisons setTimeout pour éviter des problèmes potentiels d'appels imbriqués
-        setTimeout(() => {
-          checkAdminStatus(session.user.id);
-        }, 0);
+        checkAdminStatus(session.user.id);
       } else {
         setIsAdmin(false);
       }
@@ -50,34 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
-
-  async function checkAdminStatus(userId: string | undefined) {
-    if (!userId) {
-      setIsAdmin(false);
-      return;
-    }
-
-    try {
-      // Utiliser la fonction de sécurité pour éviter la récursion infinie
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-        return;
-      }
-
-      console.log("Profile data:", data);
-      setIsAdmin(data?.role === 'admin');
-    } catch (error) {
-      console.error('Error in checkAdminStatus:', error);
-      setIsAdmin(false);
-    }
-  }
 
   const signIn = async (email: string, password: string) => {
     try {

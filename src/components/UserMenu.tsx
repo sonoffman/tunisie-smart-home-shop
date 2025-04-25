@@ -19,10 +19,6 @@ export function UserMenu() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Sortie de débogage pour diagnostiquer le problème
-  console.log("UserMenu rendering - User:", user?.email);
-  console.log("UserMenu rendering - Is Admin:", isAdmin);
-
   if (!user) {
     return (
       <>
@@ -36,12 +32,12 @@ export function UserMenu() {
   }
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center gap-2">
       {isAdmin && (
         <Button 
           variant="ghost" 
           onClick={() => navigate('/admin')}
-          className="text-sonoff-blue hover:text-sonoff-orange transition-colors mr-2"
+          className="text-sonoff-blue hover:text-sonoff-orange transition-colors"
         >
           <Shield className="h-5 w-5 mr-2" />
           Admin
