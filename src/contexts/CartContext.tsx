@@ -23,7 +23,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
 
-  // Load cart from localStorage on mount
+  // Charger le panier depuis localStorage au montage
   useEffect(() => {
     try {
       const savedCart = localStorage.getItem('cart');
@@ -38,7 +38,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Save cart to localStorage on change
+  // Sauvegarder le panier dans localStorage à chaque modification
   useEffect(() => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
@@ -48,7 +48,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const existingItemIndex = prevItems.findIndex(item => item.id === product.id);
       
       if (existingItemIndex >= 0) {
-        // Item exists - update quantity
+        // L'article existe déjà - mettre à jour la quantité
         const updatedItems = [...prevItems];
         updatedItems[existingItemIndex] = {
           ...updatedItems[existingItemIndex],
@@ -56,14 +56,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         };
         return updatedItems;
       } else {
-        // Item doesn't exist - add new item
+        // L'article n'existe pas - ajouter le nouvel article
         return [...prevItems, { ...product, quantity }];
       }
-    });
-    
-    toast({
-      title: "Produit ajouté au panier",
-      description: `${product.name} a été ajouté à votre panier`,
     });
   };
 

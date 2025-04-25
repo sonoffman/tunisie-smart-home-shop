@@ -54,7 +54,7 @@ const Profile = () => {
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       
@@ -65,6 +65,7 @@ const Profile = () => {
         description: `Impossible de charger votre profil: ${error.message}`,
         variant: "destructive",
       });
+      console.error("Profile fetch error:", error);
     } finally {
       setLoading(false);
     }
@@ -120,7 +121,28 @@ const Profile = () => {
   }
 
   if (!user || !profile) {
-    return null;
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="max-w-md mx-auto">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl">Erreur de profil</CardTitle>
+                <CardDescription>Impossible de charger le profil</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p>Nous n'avons pas pu charger votre profil. Veuillez réessayer plus tard.</p>
+              </CardContent>
+              <CardFooter>
+                <Button onClick={() => navigate('/')} className="w-full">
+                  Retour à l'accueil
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
@@ -146,7 +168,7 @@ const Profile = () => {
                   <Input
                     id="email"
                     name="email"
-                    value={profile.email}
+                    value={profile.email || ''}
                     disabled
                     readOnly
                   />

@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setIsAdmin(false);
       }
+      setLoading(false);
     });
 
     // Listen for auth changes
@@ -38,11 +39,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        checkAdminStatus(session.user.id);
+        // Utilisons setTimeout pour éviter des problèmes potentiels d'appels imbriqués
+        setTimeout(() => {
+          checkAdminStatus(session.user.id);
+        }, 0);
       } else {
         setIsAdmin(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -55,11 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
+      // Utiliser la fonction de sécurité pour éviter la récursion infinie
       const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error checking admin status:', error);

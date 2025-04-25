@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ export function UserMenu() {
   const { user, isAdmin, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Debug output to diagnose the issue
+  // Sortie de débogage pour diagnostiquer le problème
   console.log("UserMenu rendering - User:", user?.email);
   console.log("UserMenu rendering - Is Admin:", isAdmin);
 

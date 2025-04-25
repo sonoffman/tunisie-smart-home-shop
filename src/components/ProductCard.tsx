@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
@@ -24,6 +24,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) => {
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,6 +35,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
       title: "Produit ajouté au panier",
       description: `${product.name} a été ajouté à votre panier`,
     });
+  };
+
+  const handleBuyNow = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+    navigate('/checkout');
   };
 
   return (
@@ -70,14 +78,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
           >
             <ShoppingCart className="mr-2 h-4 w-4" /> Ajouter au panier
           </Button>
-          <Link to="/checkout">
-            <Button 
-              variant="outline" 
-              className="w-full border-sonoff-blue text-sonoff-blue hover:bg-sonoff-blue hover:text-white"
-            >
-              Achat immédiat
-            </Button>
-          </Link>
+          <Button 
+            variant="outline" 
+            className="w-full border-sonoff-blue text-sonoff-blue hover:bg-sonoff-blue hover:text-white"
+            onClick={handleBuyNow}
+          >
+            Achat immédiat
+          </Button>
         </div>
       </div>
     </div>

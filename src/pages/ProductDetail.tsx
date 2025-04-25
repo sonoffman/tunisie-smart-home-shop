@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, ArrowRight } from 'lucide-react';
 import { Product } from '@/components/ProductCard';
+import { useCart } from '@/contexts/CartContext';
+import { useToast } from '@/components/ui/use-toast';
 
-// This is a temporary mock data function, will be replaced with Supabase data
+// Ceci est une fonction temporaire de données fictives, qui sera remplacée par des données Supabase
 const getProductById = (id: string): Product | undefined => {
   const products: Product[] = [
     {
@@ -25,7 +27,7 @@ const getProductById = (id: string): Product | undefined => {
       category: "switch",
       description: "Interrupteur tactile mural Wi-Fi à 2 canaux avec un design élégant en verre. Contrôle indépendant de 2 circuits, compatible avec Alexa, Google Home et eWeLink.",
     },
-    // Add more products as needed...
+    // Ajouter plus de produits si nécessaire...
   ];
 
   return products.find(product => product.id === id);
@@ -35,8 +37,10 @@ const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const { addToCart } = useCart();
+  const { toast } = useToast();
   
-  // In a real app, this would be a fetch from Supabase
+  // Dans une vraie application, ce serait une requête vers Supabase
   const product = id ? getProductById(id) : undefined;
 
   if (!product) {
@@ -64,17 +68,24 @@ const ProductDetail = () => {
     }
   };
 
-  const addToCart = () => {
-    // Will implement with Supabase, just a placeholder for now
-    console.log(`Added ${quantity} of ${product.name} to cart`);
-    // TODO: Add toast notification
+  const handleAddToCart = () => {
+    addToCart(product, quantity);
+    toast({
+      title: "Produit ajouté au panier",
+      description: `${quantity} ${product.name} ${quantity > 1 ? "ont été ajoutés" : "a été ajouté"} à votre panier`,
+    });
+  };
+
+  const handleBuyNow = () => {
+    addToCart(product, quantity);
+    navigate('/checkout');
   };
 
   return (
     <Layout>
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* Product Image */}
+          {/* Image du produit */}
           <div className="rounded-lg overflow-hidden shadow-md">
             <img 
               src={product.imageUrl} 
@@ -83,7 +94,7 @@ const ProductDetail = () => {
             />
           </div>
 
-          {/* Product Details */}
+          {/* Détails du produit */}
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-4">{product.name}</h1>
             <p className="text-2xl font-bold text-sonoff-blue mb-6">{product.price.toFixed(2)} DT</p>
@@ -113,12 +124,22 @@ const ProductDetail = () => {
               </div>
             </div>
 
-            <Button 
-              onClick={addToCart} 
-              className="w-full bg-sonoff-blue hover:bg-sonoff-teal py-3 text-lg"
-            >
-              <ShoppingCart className="mr-2 h-5 w-5" /> Ajouter au panier
-            </Button>
+            <div className="space-y-4">
+              <Button 
+                onClick={handleAddToCart} 
+                className="w-full bg-sonoff-blue hover:bg-sonoff-teal py-3 text-lg"
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" /> Ajouter au panier
+              </Button>
+              
+              <Button 
+                onClick={handleBuyNow} 
+                variant="outline" 
+                className="w-full border-sonoff-blue text-sonoff-blue hover:bg-sonoff-blue hover:text-white py-3 text-lg"
+              >
+                <ArrowRight className="mr-2 h-5 w-5" /> Achat immédiat
+              </Button>
+            </div>
           </div>
         </div>
       </div>
