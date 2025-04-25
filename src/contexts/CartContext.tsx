@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Product } from '@/components/ProductCard';
@@ -52,8 +53,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           ...updatedItems[existingItemIndex],
           quantity: updatedItems[existingItemIndex].quantity + quantity
         };
+        
+        toast({
+          title: "Produit ajouté au panier",
+          description: `${product.name} a été ajouté à votre panier`,
+        });
+        
         return updatedItems;
       } else {
+        toast({
+          title: "Produit ajouté au panier",
+          description: `${product.name} a été ajouté à votre panier`,
+        });
+        
         return [...prevItems, { ...product, quantity }];
       }
     });

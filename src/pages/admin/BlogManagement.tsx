@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,7 +33,8 @@ import {
   Pencil, 
   Trash2, 
   Eye, 
-  EyeOff 
+  EyeOff,
+  Image
 } from 'lucide-react';
 
 interface BlogPost {
@@ -54,6 +55,9 @@ const BlogManagement = () => {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isNew, setIsNew] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [currentPost, setCurrentPost] = useState<Partial<BlogPost>>({
     title: '',
     slug: '',
@@ -134,6 +138,57 @@ const BlogManagement = () => {
         published: true
       });
       setIsNew(true);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!e.target.files || e.target.files.length === 0) {
+        return;
+      }
+      
+      const file = e.target.files[0];
+      setUploading(true);
+      
+      // Check if storage bucket exists, if not create it
+      const { data: bucketData, error: bucketError } = await supabase
+        .storage.getBucket('blog-images');
+      
+      if (bucketError && bucketError.message.includes('does not exist')) {
+        await supabase.storage.createBucket('blog-images', { public: true });
+      }
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('blog-images')
+        .upload(filePath, file);
+        
+      if (uploadError) throw uploadError;
+      
+      const { data: urlData } = supabase.storage
+        .from('blog-images')
+        .getPublicUrl(filePath);
+        
+      setCurrentPost(prev => ({ 
+        ...prev, 
+        featured_image: urlData.publicUrl 
+      }));
+      
+      toast({
+        title: "Succès",
+        description: "Image téléchargée avec succès",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Échec du téléchargement de l'image: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -284,14 +339,45 @@ const BlogManagement = () => {
                   </div>
                   
                   <div className="grid gap-2">
-                    <Label htmlFor="featured_image">Image à la une (URL)</Label>
-                    <Input
-                      id="featured_image"
-                      name="featured_image"
-                      value={currentPost.featured_image || ''}
-                      onChange={handleInputChange}
-                      placeholder="https://exemple.com/image.jpg"
-                    />
+                    <Label htmlFor="featured_image">Image à la une</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="featured_image"
+                        name="featured_image"
+                        value={currentPost.featured_image || ''}
+                        onChange={handleInputChange}
+                        placeholder="https://exemple.com/image.jpg"
+                        className="flex-1"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploading}
+                      >
+                        <Image className="mr-2 h-4 w-4" />
+                        Parcourir
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                    </div>
+                    
+                    {currentPost.featured_image && (
+                      <div className="mt-2">
+                        <img 
+                          src={currentPost.featured_image} 
+                          alt="Aperçu" 
+                          className="max-h-40 rounded-md border border-gray-200"
+                        />
+                      </div>
+                    )}
+                    
+                    {uploading && <p className="text-sm text-gray-500">Téléchargement en cours...</p>}
                   </div>
                   
                   <div className="grid gap-2">
@@ -320,8 +406,7 @@ const BlogManagement = () => {
                   <DialogClose asChild>
                     <Button variant="outline">Annuler</Button>
                   </DialogClose>
-                  <DialogClose>
-                    {/* Corrected DialogClose format */}
+                  <DialogClose asChild>
                     <Button onClick={() => handleSave(() => {})}>
                       {isNew ? 'Créer' : 'Mettre à jour'}
                     </Button>
@@ -420,13 +505,35 @@ const BlogManagement = () => {
                               </div>
                               
                               <div className="grid gap-2">
-                                <Label htmlFor="edit-featured_image">Image à la une (URL)</Label>
-                                <Input
-                                  id="edit-featured_image"
-                                  name="featured_image"
-                                  value={currentPost.featured_image || ''}
-                                  onChange={handleInputChange}
-                                />
+                                <Label htmlFor="edit-featured_image">Image à la une</Label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    id="edit-featured_image"
+                                    name="featured_image"
+                                    value={currentPost.featured_image || ''}
+                                    onChange={handleInputChange}
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={uploading}
+                                  >
+                                    <Image className="mr-2 h-4 w-4" />
+                                    Parcourir
+                                  </Button>
+                                </div>
+                                
+                                {currentPost.featured_image && (
+                                  <div className="mt-2">
+                                    <img 
+                                      src={currentPost.featured_image} 
+                                      alt="Aperçu" 
+                                      className="max-h-40 rounded-md border border-gray-200"
+                                    />
+                                  </div>
+                                )}
                               </div>
                               
                               <div className="grid gap-2">
@@ -454,8 +561,7 @@ const BlogManagement = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose>
-                                {/* Corrected DialogClose format */}
+                              <DialogClose asChild>
                                 <Button onClick={() => handleSave(() => {})}>
                                   Mettre à jour
                                 </Button>
@@ -481,8 +587,7 @@ const BlogManagement = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose>
-                                {/* Corrected DialogClose format */}
+                              <DialogClose asChild>
                                 <Button variant="destructive" onClick={() => handleDelete(post, () => {})}>
                                   Supprimer
                                 </Button>

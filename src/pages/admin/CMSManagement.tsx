@@ -55,23 +55,27 @@ const CMSManagement = () => {
 
   useEffect(() => {
     // Redirect non-admin users
-    if (user === null) {
+    if (!user) {
       navigate('/');
       toast({
         title: "Accès refusé",
         description: "Vous devez être connecté pour accéder à cette page.",
         variant: "destructive",
       });
-    } else if (!isAdmin) {
+      return;
+    } 
+    
+    if (!isAdmin) {
       navigate('/');
       toast({
         title: "Accès refusé",
         description: "Vous n'avez pas les droits d'administrateur.",
         variant: "destructive",
       });
-    } else {
-      fetchCMSPages();
-    }
+      return;
+    } 
+    
+    fetchCMSPages();
   }, [user, isAdmin, navigate, toast]);
 
   const fetchCMSPages = async () => {
@@ -237,8 +241,7 @@ const CMSManagement = () => {
                               <DialogClose asChild>
                                 <Button variant="outline">Annuler</Button>
                               </DialogClose>
-                              <DialogClose>
-                                {/* Corrected DialogClose format */}
+                              <DialogClose asChild>
                                 <Button onClick={() => handleSave(() => {})}>
                                   Mettre à jour
                                 </Button>

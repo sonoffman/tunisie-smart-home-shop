@@ -36,7 +36,7 @@ const CMSPage = () => {
         .from('cms_pages')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setPage(data as CMSPage);

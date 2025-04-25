@@ -50,6 +50,16 @@ const Profile = () => {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      
+      // Utiliser la fonction RPC pour récupérer le profil utilisateur et éviter la récursion infinie
+      const { data: userData, error: userError } = await supabase
+        .rpc('get_user_role', { user_id: user?.id });
+        
+      if (userError) {
+        console.error("Error fetching user role:", userError);
+      }
+
+      // Récupérer les données du profil
       const { data, error } = await supabase
         .from('profiles')
         .select('*')

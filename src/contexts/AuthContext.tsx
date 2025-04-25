@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,11 +23,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const checkAdminStatus = async (userId: string) => {
     try {
+      // Utilise la fonction security definer pour éviter la récursion infinie
       const { data, error } = await supabase
-        .rpc('get_user_role', { user_id: userId });
+        .rpc('is_admin', { user_id: userId });
       
       if (error) throw error;
-      setIsAdmin(data === 'admin');
+      setIsAdmin(Boolean(data));
     } catch (error: any) {
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
