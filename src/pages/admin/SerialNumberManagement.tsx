@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Table,
   TableBody,
@@ -14,6 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -22,10 +24,8 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogClose,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Pencil, Trash, Check, X } from 'lucide-react';
+import { PlusCircle, Trash2, CheckCircle, XCircle } from 'lucide-react';
 
 interface SerialNumber {
   id: string;
@@ -41,9 +41,7 @@ interface SerialNumber {
   product_id: string | null;
   is_valid: boolean;
   created_at: string;
-  product?: {
-    name: string;
-  };
+  product_name?: string;
 }
 
 interface Product {
@@ -58,49 +56,60 @@ const SerialNumberManagement = () => {
   const [serialNumbers, setSerialNumbers] = useState<SerialNumber[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentSerialNumber, setCurrentSerialNumber] = useState<Partial<SerialNumber>>({
-    serial_number: '',
-    product_id: null,
-    is_valid: true
-  });
+  const [newSerialNumber, setNewSerialNumber] = useState('');
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (!user) {
+    // Redirect non-admin users
+    if (user === null) {
       navigate('/');
       toast({
         title: "Accès refusé",
         description: "Vous devez être connecté pour accéder à cette page.",
         variant: "destructive",
       });
-      return;
-    } 
-    
-    if (!isAdmin) {
+    } else if (!isAdmin) {
       navigate('/');
       toast({
         title: "Accès refusé",
         description: "Vous n'avez pas les droits d'administrateur.",
         variant: "destructive",
       });
-      return;
-    } 
-    
-    fetchSerialNumbers();
-    fetchProducts();
+    } else {
+      fetchSerialNumbers();
+      fetchProducts();
+    }
   }, [user, isAdmin, navigate, toast]);
 
   const fetchSerialNumbers = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('serial_numbers')
         .select(`
-          *,
-          product:products(name)
+          id,
+          serial_number,
+          product_id,
+          is_valid,
+          created_at,
+          products:product_id (name)
         `)
         .order('created_at', { ascending: false });
-
+      
       if (error) throw error;
-      setSerialNumbers(data);
+      
+      // Transform the data to match the SerialNumber interface
+      const formattedData = data.map((item: any) => ({
+        id: item.id,
+        serial_number: item.serial_number,
+        product_id: item.product_id,
+        is_valid: item.is_valid,
+        created_at: item.created_at,
+        product_name: item.products?.name || 'Non assigné'
+      }));
+      
+      setSerialNumbers(formattedData);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -111,14 +120,14 @@ const SerialNumberManagement = () => {
       setLoading(false);
     }
   };
-
+  
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from('products')
         .select('id, name')
         .order('name');
-
+      
       if (error) throw error;
       setProducts(data);
     } catch (error: any) {
@@ -130,97 +139,66 @@ const SerialNumberManagement = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCurrentSerialNumber(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleProductChange = (value: string) => {
-    setCurrentSerialNumber(prev => ({ ...prev, product_id: value }));
-  };
-
-  const handleOpenDialog = (serialNumber: SerialNumber) => {
-    setCurrentSerialNumber(serialNumber);
-  };
-
-  const handleSave = async (closeDialog: () => void) => {
-    try {
-      if (!currentSerialNumber.serial_number) {
-        toast({
-          title: "Erreur",
-          description: "Le numéro de série est requis",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (currentSerialNumber.id) {
-        const { error } = await supabase
-          .from('serial_numbers')
-          .update({
-            serial_number: currentSerialNumber.serial_number,
-            product_id: currentSerialNumber.product_id,
-            is_valid: currentSerialNumber.is_valid
-          })
-          .eq('id', currentSerialNumber.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Succès",
-          description: "Le numéro de série a été mis à jour",
-        });
-      } else {
-        const { error } = await supabase
-          .from('serial_numbers')
-          .insert([{
-            serial_number: currentSerialNumber.serial_number,
-            product_id: currentSerialNumber.product_id,
-            is_valid: true
-          }]);
-
-        if (error) throw error;
-
-        toast({
-          title: "Succès",
-          description: "Le numéro de série a été créé",
-        });
-      }
-
-      fetchSerialNumbers();
-      closeDialog();
-      setCurrentSerialNumber({
-        serial_number: '',
-        product_id: null,
-        is_valid: true
+  const handleAddSerialNumber = async () => {
+    if (!newSerialNumber.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le numéro de série ne peut pas être vide",
+        variant: "destructive",
       });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('serial_numbers')
+        .insert([
+          { 
+            serial_number: newSerialNumber,
+            product_id: selectedProductId,
+            is_valid: true
+          }
+        ])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Succès",
+        description: "Le numéro de série a été ajouté avec succès",
+      });
+      
+      // Clear form
+      setNewSerialNumber('');
+      setSelectedProductId(null);
+      setIsDialogOpen(false);
+      
+      // Refresh data
+      fetchSerialNumbers();
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: `Impossible de sauvegarder le numéro de série: ${error.message}`,
+        description: `Impossible d'ajouter le numéro de série: ${error.message}`,
         variant: "destructive",
       });
     }
   };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce numéro de série ?')) {
-      return;
-    }
-
+  
+  const handleDeleteSerialNumber = async (id: string) => {
     try {
       const { error } = await supabase
         .from('serial_numbers')
         .delete()
         .eq('id', id);
-
+      
       if (error) throw error;
-
+      
       toast({
         title: "Succès",
-        description: "Le numéro de série a été supprimé",
+        description: "Le numéro de série a été supprimé avec succès",
       });
-
+      
+      // Refresh data
       fetchSerialNumbers();
     } catch (error: any) {
       toast({
@@ -230,26 +208,27 @@ const SerialNumberManagement = () => {
       });
     }
   };
-
-  const toggleValidity = async (id: string, currentValidity: boolean) => {
+  
+  const toggleValidity = async (id: string, currentStatus: boolean) => {
     try {
       const { error } = await supabase
         .from('serial_numbers')
-        .update({ is_valid: !currentValidity })
+        .update({ is_valid: !currentStatus })
         .eq('id', id);
-
+      
       if (error) throw error;
-
+      
       toast({
         title: "Succès",
-        description: `Le numéro de série est maintenant ${!currentValidity ? 'valide' : 'invalide'}`,
+        description: `Le numéro de série a été ${!currentStatus ? 'validé' : 'invalidé'}`,
       });
-
+      
+      // Refresh data
       fetchSerialNumbers();
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: `Impossible de modifier la validité: ${error.message}`,
+        description: `Impossible de mettre à jour le statut: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -264,41 +243,46 @@ const SerialNumberManagement = () => {
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-sonoff-blue">Gestion des numéros de série</h1>
-          
           <div className="flex gap-4">
-            <Dialog>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>Nouveau numéro de série</Button>
+                <Button className="flex items-center gap-2">
+                  <PlusCircle className="h-5 w-5" />
+                  Ajouter un numéro de série
+                </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Ajouter un numéro de série</DialogTitle>
+                  <DialogTitle>Ajouter un nouveau numéro de série</DialogTitle>
                   <DialogDescription>
-                    Créez un nouveau numéro de série pour un produit.
+                    Saisissez le numéro de série et associez-le à un produit
                   </DialogDescription>
                 </DialogHeader>
-                
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="serial_number">Numéro de série</Label>
-                    <Input
-                      id="serial_number"
-                      name="serial_number"
-                      value={currentSerialNumber.serial_number}
-                      onChange={handleInputChange}
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label htmlFor="serialNumber" className="text-sm font-medium">
+                      Numéro de série
+                    </label>
+                    <Input 
+                      id="serialNumber"
+                      value={newSerialNumber}
+                      onChange={(e) => setNewSerialNumber(e.target.value)}
+                      placeholder="Entrez le numéro de série"
                     />
                   </div>
-                  
-                  <div className="grid gap-2">
-                    <Label htmlFor="product">Produit</Label>
-                    <Select
-                      value={currentSerialNumber.product_id || ''}
-                      onValueChange={handleProductChange}
+                  <div className="space-y-2">
+                    <label htmlFor="product" className="text-sm font-medium">
+                      Produit associé (optionnel)
+                    </label>
+                    <Select 
+                      value={selectedProductId || ''} 
+                      onValueChange={(value) => setSelectedProductId(value || null)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionnez un produit" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="">Non associé</SelectItem>
                         {products.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.name}
@@ -308,20 +292,15 @@ const SerialNumberManagement = () => {
                     </Select>
                   </div>
                 </div>
-                
-                <div className="flex justify-end gap-4">
+                <DialogFooter>
                   <DialogClose asChild>
                     <Button variant="outline">Annuler</Button>
                   </DialogClose>
-                  <DialogClose asChild>
-                    <Button onClick={() => handleSave(() => {})}>
-                      Sauvegarder
-                    </Button>
-                  </DialogClose>
-                </div>
+                  <Button onClick={handleAddSerialNumber}>Ajouter</Button>
+                </DialogFooter>
               </DialogContent>
             </Dialog>
-
+            
             <Button variant="outline" onClick={() => navigate('/admin')}>
               Retour au dashboard
             </Button>
@@ -335,7 +314,7 @@ const SerialNumberManagement = () => {
               <TableRow>
                 <TableHead>Numéro de série</TableHead>
                 <TableHead>Produit</TableHead>
-                <TableHead>Validité</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Date de création</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -350,109 +329,52 @@ const SerialNumberManagement = () => {
                   <TableCell colSpan={5} className="text-center">Aucun numéro de série trouvé</TableCell>
                 </TableRow>
               ) : (
-                serialNumbers.map((serialNumber) => (
-                  <TableRow key={serialNumber.id}>
-                    <TableCell className="font-medium">{serialNumber.serial_number}</TableCell>
-                    <TableCell>{serialNumber.product?.name || '-'}</TableCell>
+                serialNumbers.map((serial) => (
+                  <TableRow key={serial.id}>
+                    <TableCell className="font-medium">{serial.serial_number}</TableCell>
+                    <TableCell>{serial.product_name || 'Non assigné'}</TableCell>
                     <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          serialNumber.is_valid
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
+                      {serial.is_valid ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Valide
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Invalide
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{new Date(serial.created_at).toLocaleDateString('fr-FR')}</TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => toggleValidity(serial.id, serial.is_valid)}
+                        className={serial.is_valid ? "text-red-500" : "text-green-500"}
                       >
-                        {serialNumber.is_valid ? 'Valide' : 'Invalide'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {new Date(serialNumber.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => toggleValidity(serialNumber.id, serialNumber.is_valid)}
-                          title={serialNumber.is_valid ? "Invalider" : "Valider"}
-                        >
-                          {serialNumber.is_valid ? (
-                            <X className="h-4 w-4" />
-                          ) : (
-                            <Check className="h-4 w-4" />
-                          )}
-                        </Button>
-                        
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => handleOpenDialog(serialNumber)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Modifier le numéro de série</DialogTitle>
-                              <DialogDescription>
-                                Modifiez les informations du numéro de série.
-                              </DialogDescription>
-                            </DialogHeader>
-                            
-                            <div className="grid gap-4 py-4">
-                              <div className="grid gap-2">
-                                <Label htmlFor="edit-serial-number">Numéro de série</Label>
-                                <Input
-                                  id="edit-serial-number"
-                                  name="serial_number"
-                                  value={currentSerialNumber.serial_number}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              
-                              <div className="grid gap-2">
-                                <Label htmlFor="edit-product">Produit</Label>
-                                <Select
-                                  value={currentSerialNumber.product_id || ''}
-                                  onValueChange={handleProductChange}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionnez un produit" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {products.map((product) => (
-                                      <SelectItem key={product.id} value={product.id}>
-                                        {product.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            
-                            <div className="flex justify-end gap-4">
-                              <DialogClose asChild>
-                                <Button variant="outline">Annuler</Button>
-                              </DialogClose>
-                              <DialogClose asChild>
-                                <Button onClick={() => handleSave(() => {})}>
-                                  Mettre à jour
-                                </Button>
-                              </DialogClose>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                        
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => handleDelete(serialNumber.id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
+                        {serial.is_valid ? (
+                          <>
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Invalider
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Valider
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-red-500"
+                        onClick={() => handleDeleteSerialNumber(serial.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Supprimer
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
