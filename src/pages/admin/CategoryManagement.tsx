@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,19 +47,13 @@ const CategoryManagement = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
-    // Redirect non-admin users
-    if (user === null) {
+    if (user === null || !isAdmin) {
       navigate('/');
       toast({
         title: "Accès refusé",
-        description: "Vous devez être connecté pour accéder à cette page.",
-        variant: "destructive",
-      });
-    } else if (!isAdmin) {
-      navigate('/');
-      toast({
-        title: "Accès refusé",
-        description: "Vous n'avez pas les droits d'administrateur.",
+        description: user === null 
+          ? "Vous devez être connecté pour accéder à cette page." 
+          : "Vous n'avez pas les droits d'administrateur.",
         variant: "destructive",
       });
     } else {
@@ -71,40 +64,26 @@ const CategoryManagement = () => {
   const fetchCategories = async () => {
     setLoading(true);
     try {
-      // Fetch categories with product count
-      const { data: categoriesWithCount, error: countError } = await supabase
-        .rpc('get_categories_with_product_count');
+      // Fetch categories with a custom SQL query to get product count
+      const { data, error } = await supabase
+        .from('categories')
+        .select(`
+          id, 
+          name, 
+          slug, 
+          icon,
+          products:products(count)
+        `);
 
-      if (countError) throw countError;
-      setCategories(categoriesWithCount || []);
+      if (error) throw error;
 
-      // If the above RPC function is not available, use this alternative approach
-      if (!categoriesWithCount) {
-        const { data: categoriesData, error: categoriesError } = await supabase
-          .from('categories')
-          .select('*');
+      // Transform the data to match our Category interface
+      const categoriesWithCount = data.map(category => ({
+        ...category,
+        product_count: category.products ? category.products[0]?.count : 0
+      }));
 
-        if (categoriesError) throw categoriesError;
-
-        // For each category, count products
-        const categoriesWithProductCount = await Promise.all(
-          categoriesData.map(async (category) => {
-            const { count, error: productError } = await supabase
-              .from('products')
-              .select('id', { count: 'exact', head: true })
-              .eq('category_id', category.id);
-            
-            if (productError) throw productError;
-            
-            return {
-              ...category,
-              product_count: count || 0
-            };
-          })
-        );
-
-        setCategories(categoriesWithProductCount);
-      }
+      setCategories(categoriesWithCount);
     } catch (error: any) {
       toast({
         title: "Erreur",
