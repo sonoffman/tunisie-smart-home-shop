@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,6 +23,8 @@ import UserManagement from "./pages/admin/UserManagement";
 import BlogManagement from "./pages/admin/BlogManagement";
 import CMSManagement from "./pages/admin/CMSManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
+import CategoryManagement from "./pages/admin/CategoryManagement";
+import SerialNumberManagement from "./pages/admin/SerialNumberManagement";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,8 @@ const App = () => (
               <Route path="/admin/blog" element={<BlogManagement />} />
               <Route path="/admin/cms" element={<CMSManagement />} />
               <Route path="/admin/orders" element={<OrderManagement />} />
+              <Route path="/admin/categories" element={<CategoryManagement />} />
+              <Route path="/admin/serial-numbers" element={<SerialNumberManagement />} />
               
               {/* Catch-all route for 404 */}
               <Route path="*" element={<NotFound />} />

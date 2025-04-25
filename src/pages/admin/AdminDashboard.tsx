@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -58,22 +57,16 @@ const AdminDashboard = () => {
       route: "/admin/orders"
     },
     {
-      title: "Gestion des produits",
-      description: "Ajouter, modifier ou supprimer des produits",
-      icon: Package,
-      route: "/admin/products"
+      title: "Gestion des catégories",
+      description: "Gérer les catégories de produits",
+      icon: Tag,
+      route: "/admin/categories"
     },
     {
       title: "Gestion des utilisateurs",
       description: "Gérer les comptes utilisateurs et leurs rôles",
       icon: Users,
       route: "/admin/users"
-    },
-    {
-      title: "Facturation",
-      description: "Gérer les factures et créer de nouvelles factures",
-      icon: FileText,
-      route: "/admin/invoices"
     },
     {
       title: "Blog",
@@ -92,12 +85,6 @@ const AdminDashboard = () => {
       description: "Gérer les numéros de série des produits",
       icon: Shield,
       route: "/admin/serial-numbers"
-    },
-    {
-      title: "Catégories",
-      description: "Gérer les catégories de produits",
-      icon: Tag,
-      route: "/admin/categories"
     }
   ];
 
