@@ -65,19 +65,22 @@ const CheckoutPage = () => {
 
     try {
       // Créer la commande
+      let orderQuery = {
+        customer_name: data.fullName,
+        customer_phone: data.phone,
+        customer_address: data.address,
+        total_amount: totalAmount,
+        status: 'new'
+      } as any;
+      
+      // N'ajoutez user_id que si l'utilisateur est connecté et que son ID est de type UUID valide
+      if (user?.id && typeof user.id === 'string' && user.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        orderQuery.user_id = user.id;
+      }
+      
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert([
-          {
-            // On ne passe plus le user_id si null car cela cause des problèmes de conversion
-            ...(user?.id ? { user_id: user.id } : {}),
-            customer_name: data.fullName,
-            customer_phone: data.phone,
-            customer_address: data.address,
-            total_amount: totalAmount,
-            status: 'new'
-          }
-        ])
+        .insert([orderQuery])
         .select('id')
         .single();
 

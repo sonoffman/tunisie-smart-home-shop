@@ -48,11 +48,18 @@ interface Order {
   status: OrderStatus;
 }
 
+interface OrderItem {
+  product_name: string;
+  quantity: number;
+  price: number;
+}
+
 const InvoiceManagement = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('validated');
@@ -93,7 +100,16 @@ const InvoiceManagement = () => {
 
       if (error) throw error;
       
-      setOrders(data as Order[]);
+      setOrders(data || []);
+      
+      // Récupérer tous les éléments de commande pour la recherche par produit
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*');
+        
+      if (itemsError) throw itemsError;
+      
+      setOrderItems(items || []);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -146,10 +162,24 @@ const InvoiceManagement = () => {
     }
   };
 
-  const filteredOrders = orders.filter(order => 
-    order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customer_phone.includes(searchTerm)
-  );
+  // Filtrer les commandes selon le terme de recherche
+  const filteredOrders = orders.filter(order => {
+    if (searchTerm === '') return true;
+    
+    // Vérifier le nom du client et le téléphone
+    if (order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer_phone.includes(searchTerm)) {
+      return true;
+    }
+    
+    // Vérifier les produits dans la commande
+    const orderProductItems = orderItems.filter(item => {
+      const orderId = order.id;
+      return item.order_id === orderId && item.product_name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+    
+    return orderProductItems.length > 0;
+  });
 
   if (!user || !isAdmin) {
     return null;
@@ -214,7 +244,7 @@ const InvoiceManagement = () => {
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input
-                placeholder="Rechercher par nom ou téléphone"
+                placeholder="Rechercher par nom, téléphone ou produit"
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
