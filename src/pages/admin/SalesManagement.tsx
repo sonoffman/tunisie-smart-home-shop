@@ -231,33 +231,22 @@ const SalesManagement = () => {
 
       // Mise à jour des stocks
       for (const item of cartItems) {
-        // Fix type issue with decrement - use raw SQL update instead of rpc
-        const { error: stockError } = await supabase
+        // Get current stock quantity
+        const { data: productData } = await supabase
           .from('products')
-          .update({ 
-            stock_quantity: supabase.rpc('decrement', { x: item.quantity, row_id: item.product_id }) 
-          })
+          .select('stock_quantity')
           .eq('id', item.product_id)
-          .gt('stock_quantity', item.quantity - 1); // S'assurer qu'il y a assez de stock
-
-        if (stockError) {
-          // Fallback approach if rpc doesn't work - get current stock and decrement manually
-          const { data: productData } = await supabase
+          .single();
+          
+        if (productData) {
+          const newStock = Math.max(0, productData.stock_quantity - item.quantity);
+          
+          const { error: updateError } = await supabase
             .from('products')
-            .select('stock_quantity')
-            .eq('id', item.product_id)
-            .single();
+            .update({ stock_quantity: newStock })
+            .eq('id', item.product_id);
             
-          if (productData) {
-            const newStock = Math.max(0, productData.stock_quantity - item.quantity);
-            
-            const { error: updateError } = await supabase
-              .from('products')
-              .update({ stock_quantity: newStock })
-              .eq('id', item.product_id);
-              
-            if (updateError) throw updateError;
-          }
+          if (updateError) throw updateError;
         }
       }
 
@@ -330,9 +319,9 @@ const SalesManagement = () => {
                         <SelectContent>
                           <SelectGroup>
                             {loading ? (
-                              <SelectItem value="loading" disabled>Chargement...</SelectItem>
+                              <SelectItem value="loading">Chargement...</SelectItem>
                             ) : products.length === 0 ? (
-                              <SelectItem value="empty" disabled>Aucun produit disponible</SelectItem>
+                              <SelectItem value="empty">Aucun produit disponible</SelectItem>
                             ) : (
                               products.map((product) => (
                                 <SelectItem key={product.id} value={product.id}>

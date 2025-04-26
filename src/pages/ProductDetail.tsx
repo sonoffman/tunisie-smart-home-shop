@@ -4,11 +4,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Plus, Minus, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, ArrowRight, ChevronLeft, ChevronRight, Phone, Mail } from 'lucide-react';
 import { Product } from '@/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Json } from '@/integrations/supabase/types';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,10 +64,15 @@ const ProductDetail = () => {
         setProduct(productData);
         setMainImage(data.main_image_url);
         
-        // Fix type issue by ensuring we convert additional_images to string array
-        if (Array.isArray(data.additional_images)) {
-          const stringImages = data.additional_images.map(img => String(img));
-          setAdditionalImages(stringImages);
+        // Convert additional_images from Json to string array
+        if (data.additional_images && Array.isArray(data.additional_images)) {
+          const imageArray: string[] = [];
+          data.additional_images.forEach(img => {
+            if (typeof img === 'string') {
+              imageArray.push(img);
+            }
+          });
+          setAdditionalImages(imageArray);
         } else {
           setAdditionalImages([]);
         }
@@ -213,6 +219,19 @@ const ProductDetail = () => {
             <div className="mb-6">
               <h2 className="text-xl font-semibold mb-2">Description</h2>
               <p className="text-gray-600">{product.description}</p>
+            </div>
+            
+            {/* Contact information with clickable phone and email */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h2 className="text-lg font-semibold mb-2">Besoin d'aide?</h2>
+              <div className="flex items-center space-x-2 mb-2">
+                <Phone size={16} className="text-sonoff-blue" />
+                <a href="tel:+21655123456" className="text-sonoff-blue hover:underline">+216 55 123 456</a>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Mail size={16} className="text-sonoff-blue" />
+                <a href="mailto:contact@sonoff-store.tn" className="text-sonoff-blue hover:underline">contact@sonoff-store.tn</a>
+              </div>
             </div>
 
             <div className="flex items-center mb-8">
