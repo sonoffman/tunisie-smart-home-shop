@@ -181,7 +181,7 @@ const InvoiceGenerator = () => {
     doc.text('Termes et conditions:', 20, finalY + 20);
     doc.setFont('helvetica', 'normal');
     doc.text('Paiement à la livraison', 20, finalY + 28);
-    doc.text('Les produits restent la propriété de Sonoff Tunisie jusqu'au paiement complet', 20, finalY + 36);
+    doc.text('Les produits restent la propriété de Sonoff Tunisie jusqu\'au paiement complet', 20, finalY + 36);
     doc.text('Garantie de 12 mois sur tous les produits', 20, finalY + 44);
     
     // Signature
