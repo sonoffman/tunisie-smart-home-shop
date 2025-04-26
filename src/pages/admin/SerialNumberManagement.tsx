@@ -155,7 +155,8 @@ const SerialNumberManagement = () => {
         .insert([
           { 
             serial_number: newSerialNumber,
-            product_id: selectedProductId,
+            // Modified to handle the "none" value properly
+            product_id: selectedProductId === "none" ? null : selectedProductId,
             is_valid: true
           }
         ])
@@ -275,14 +276,15 @@ const SerialNumberManagement = () => {
                       Produit associé (optionnel)
                     </label>
                     <Select 
-                      value={selectedProductId || ''} 
+                      value={selectedProductId || undefined} 
                       onValueChange={(value) => setSelectedProductId(value || null)}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Sélectionnez un produit" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Non associé</SelectItem>
+                        {/* Fix: Replace empty string value with a non-empty string value */}
+                        <SelectItem value="none">Non associé</SelectItem>
                         {products.map((product) => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.name}
