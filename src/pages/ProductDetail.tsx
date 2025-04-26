@@ -1,47 +1,120 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Plus, Minus, ArrowRight } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Product } from '@/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/components/ui/use-toast';
-
-// Ceci est une fonction temporaire de données fictives, qui sera remplacée par des données Supabase
-const getProductById = (id: string): Product | undefined => {
-  const products: Product[] = [
-    {
-      id: "1",
-      name: "Sonoff MINI R2",
-      price: 35.99,
-      imageUrl: "https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=500&q=80",
-      category: "wifi",
-      description: "Mini interrupteur intelligent compatible avec Alexa et Google Home. Ce petit appareil vous permet de contrôler vos appareils électriques à distance via l'application eWeLink. Compatible avec la plupart des systèmes de domotique.",
-    },
-    {
-      id: "2",
-      name: "Sonoff TX2 EU",
-      price: 75.50,
-      imageUrl: "https://images.unsplash.com/photo-1585399000684-d2f72660f092?auto=format&fit=crop&w=500&q=80",
-      category: "switch",
-      description: "Interrupteur tactile mural Wi-Fi à 2 canaux avec un design élégant en verre. Contrôle indépendant de 2 circuits, compatible avec Alexa, Google Home et eWeLink.",
-    },
-    // Ajouter plus de produits si nécessaire...
-  ];
-
-  return products.find(product => product.id === id);
-};
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const { addToCart } = useCart();
   const { toast } = useToast();
   
-  // Dans une vraie application, ce serait une requête vers Supabase
-  const product = id ? getProductById(id) : undefined;
+  useEffect(() => {
+    if (id) {
+      fetchProduct(id);
+    }
+  }, [id]);
+
+  const fetchProduct = async (productId: string) => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id,
+          name,
+          description,
+          price,
+          stock_quantity,
+          main_image_url,
+          additional_images,
+          category_id,
+          categories(name)
+        `)
+        .eq('id', productId)
+        .single();
+
+      if (error) throw error;
+      
+      if (data) {
+        const productData: Product = {
+          id: data.id,
+          name: data.name,
+          description: data.description || '',
+          price: data.price,
+          stock: data.stock_quantity,
+          imageUrl: data.main_image_url || "https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=500&q=80",
+          category: data.categories?.name || ''
+        };
+        
+        setProduct(productData);
+        setMainImage(data.main_image_url);
+        setAdditionalImages(Array.isArray(data.additional_images) ? data.additional_images : []);
+      } else {
+        // Produit non trouvé, utiliser les données fictives
+        const dummyProduct = getProductById(productId);
+        setProduct(dummyProduct || null);
+        setMainImage(dummyProduct?.imageUrl || null);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement du produit:", error);
+      // Produit non trouvé, utiliser les données fictives
+      const dummyProduct = getProductById(productId);
+      setProduct(dummyProduct || null);
+      setMainImage(dummyProduct?.imageUrl || null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonction de données fictives pour la rétrocompatibilité
+  const getProductById = (id: string): Product | undefined => {
+    const products: Product[] = [
+      {
+        id: "1",
+        name: "Sonoff MINI R2",
+        price: 35.99,
+        imageUrl: "https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=500&q=80",
+        category: "wifi",
+        description: "Mini interrupteur intelligent compatible avec Alexa et Google Home. Ce petit appareil vous permet de contrôler vos appareils électriques à distance via l'application eWeLink. Compatible avec la plupart des systèmes de domotique.",
+      },
+      {
+        id: "2",
+        name: "Sonoff TX2 EU",
+        price: 75.50,
+        imageUrl: "https://images.unsplash.com/photo-1585399000684-d2f72660f092?auto=format&fit=crop&w=500&q=80",
+        category: "switch",
+        description: "Interrupteur tactile mural Wi-Fi à 2 canaux avec un design élégant en verre. Contrôle indépendant de 2 circuits, compatible avec Alexa, Google Home et eWeLink.",
+      },
+    ];
+
+    return products.find(product => product.id === id);
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4">Chargement du produit...</h1>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   if (!product) {
     return (
@@ -81,17 +154,48 @@ const ProductDetail = () => {
     navigate('/checkout');
   };
 
+  const setActiveImage = (imageUrl: string) => {
+    setMainImage(imageUrl);
+  };
+
+  // Combiner les images pour l'affichage en carousel
+  const allImages = [mainImage, ...additionalImages].filter(img => img !== null) as string[];
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* Image du produit */}
-          <div className="rounded-lg overflow-hidden shadow-md">
-            <img 
-              src={product.imageUrl} 
-              alt={product.name} 
-              className="w-full h-auto object-cover"
-            />
+          {/* Images du produit */}
+          <div className="space-y-4">
+            {/* Image principale */}
+            <div className="rounded-lg overflow-hidden shadow-md h-[400px]">
+              <img 
+                src={mainImage || product.imageUrl} 
+                alt={product.name} 
+                className="w-full h-full object-contain"
+              />
+            </div>
+
+            {/* Images supplémentaires */}
+            {allImages.length > 1 && (
+              <div className="flex overflow-x-auto space-x-2 py-2">
+                {allImages.map((img, idx) => (
+                  <div 
+                    key={idx}
+                    className={`flex-shrink-0 w-20 h-20 rounded overflow-hidden cursor-pointer border-2 ${
+                      img === mainImage ? 'border-sonoff-blue' : 'border-transparent'
+                    }`}
+                    onClick={() => setActiveImage(img)}
+                  >
+                    <img 
+                      src={img} 
+                      alt={`${product.name} - vue ${idx + 1}`} 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Détails du produit */}
@@ -107,38 +211,76 @@ const ProductDetail = () => {
             <div className="flex items-center mb-8">
               <span className="mr-4 font-semibold">Quantité:</span>
               <div className="flex items-center border rounded-md">
-                <button 
-                  onClick={decreaseQuantity} 
-                  className="px-3 py-2 text-gray-600 hover:bg-gray-100"
-                  disabled={quantity <= 1}
-                >
-                  <Minus size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={decreaseQuantity} 
+                        className="px-3 py-2 text-gray-600 hover:bg-gray-100"
+                        disabled={quantity <= 1}
+                      >
+                        <Minus size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Diminuer la quantité</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
                 <span className="px-4 py-2 text-center w-12">{quantity}</span>
-                <button 
-                  onClick={increaseQuantity} 
-                  className="px-3 py-2 text-gray-600 hover:bg-gray-100"
-                >
-                  <Plus size={16} />
-                </button>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={increaseQuantity} 
+                        className="px-3 py-2 text-gray-600 hover:bg-gray-100"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Augmenter la quantité</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
 
             <div className="space-y-4">
-              <Button 
-                onClick={handleAddToCart} 
-                className="w-full bg-sonoff-blue hover:bg-sonoff-teal py-3 text-lg"
-              >
-                <ShoppingCart className="mr-2 h-5 w-5" /> Ajouter au panier
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      onClick={handleAddToCart} 
+                      className="w-full bg-sonoff-blue hover:bg-sonoff-teal py-3 text-lg"
+                    >
+                      <ShoppingCart className="mr-2 h-5 w-5" /> Ajouter au panier
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Ajouter ce produit à votre panier</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
-              <Button 
-                onClick={handleBuyNow} 
-                variant="outline" 
-                className="w-full border-sonoff-blue text-sonoff-blue hover:bg-sonoff-blue hover:text-white py-3 text-lg"
-              >
-                <ArrowRight className="mr-2 h-5 w-5" /> Achat immédiat
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      onClick={handleBuyNow} 
+                      variant="outline" 
+                      className="w-full border-sonoff-blue text-sonoff-blue hover:bg-sonoff-blue hover:text-white py-3 text-lg"
+                    >
+                      <ArrowRight className="mr-2 h-5 w-5" /> Achat immédiat
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Acheter ce produit maintenant</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>

@@ -21,6 +21,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const checkoutSchema = z.object({
   fullName: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
@@ -63,12 +64,13 @@ const CheckoutPage = () => {
     setProcessing(true);
 
     try {
-      // First, create the order
+      // Créer la commande
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([
           {
-            user_id: user?.id || null,
+            // On ne passe plus le user_id si null car cela cause des problèmes de conversion
+            ...(user?.id ? { user_id: user.id } : {}),
             customer_name: data.fullName,
             customer_phone: data.phone,
             customer_address: data.address,
@@ -81,7 +83,11 @@ const CheckoutPage = () => {
 
       if (orderError) throw orderError;
 
-      // Then, insert order items
+      if (!orderData || !orderData.id) {
+        throw new Error("Impossible d'obtenir l'ID de la commande");
+      }
+
+      // Préparer les éléments de la commande
       const orderItemsToInsert = cartItems.map(item => ({
         order_id: orderData.id,
         product_id: item.id,
@@ -96,7 +102,7 @@ const CheckoutPage = () => {
 
       if (orderItemsError) throw orderItemsError;
 
-      // Check if there's a customer with phone number in customer_issues table
+      // Vérifier si le client a des problèmes non résolus
       const { data: issueData, error: issueError } = await supabase
         .from('customer_issues')
         .select('id')
@@ -105,9 +111,8 @@ const CheckoutPage = () => {
 
       if (issueError) throw issueError;
 
-      // If customer has unresolved issues, show a warning to the admin
+      // Alerter en cas de problèmes non résolus
       if (issueData && issueData.length > 0) {
-        // In a real app, this might trigger a notification to admins
         console.log(`Warning: Customer with phone ${data.phone} has unresolved issues`);
       }
 
@@ -116,10 +121,10 @@ const CheckoutPage = () => {
         description: "Votre commande a été enregistrée avec succès",
       });
 
-      // Clear cart
+      // Vider le panier
       clearCart();
       
-      // Redirect to homepage
+      // Rediriger vers la page d'accueil
       navigate('/');
     } catch (error: any) {
       toast({
@@ -233,21 +238,40 @@ const CheckoutPage = () => {
                     />
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-2">
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-sonoff-blue hover:bg-sonoff-teal" 
-                      disabled={processing || cartItems.length === 0}
-                    >
-                      {processing ? 'Traitement...' : 'Finaliser la commande'}
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={handleContinueShopping}
-                    >
-                      Continuer mes achats
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            type="submit" 
+                            className="w-full bg-sonoff-blue hover:bg-sonoff-teal" 
+                            disabled={processing || cartItems.length === 0}
+                          >
+                            {processing ? 'Traitement...' : 'Finaliser la commande'}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Confirmer et enregistrer votre commande</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={handleContinueShopping}
+                          >
+                            Continuer mes achats
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Revenir à la page d'accueil</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </CardFooter>
                 </form>
               </Form>

@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +12,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   ShoppingCart, 
   Users, 
@@ -18,7 +20,8 @@ import {
   FileText, 
   BookText, 
   Shield, 
-  Tag 
+  Tag,
+  Receipt
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -57,10 +60,28 @@ const AdminDashboard = () => {
       route: "/admin/orders"
     },
     {
+      title: "Gestion des produits",
+      description: "Gérer le catalogue de produits",
+      icon: Package,
+      route: "/admin/products"
+    },
+    {
       title: "Gestion des catégories",
       description: "Gérer les catégories de produits",
       icon: Tag,
       route: "/admin/categories"
+    },
+    {
+      title: "Gestion des ventes",
+      description: "Enregistrer des ventes manuelles",
+      icon: ShoppingCart,
+      route: "/admin/sales"
+    },
+    {
+      title: "Gestion des factures",
+      description: "Générer et gérer les factures",
+      icon: Receipt,
+      route: "/admin/invoices"
     },
     {
       title: "Gestion des utilisateurs",
@@ -104,12 +125,21 @@ const AdminDashboard = () => {
                 {feature.description}
               </CardDescription>
               <CardContent className="pt-4">
-                <Button 
-                  className="w-full" 
-                  onClick={() => navigate(feature.route)}
-                >
-                  Accéder
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        className="w-full" 
+                        onClick={() => navigate(feature.route)}
+                      >
+                        Accéder
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Accéder à {feature.title.toLowerCase()}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </CardContent>
             </Card>
           ))}

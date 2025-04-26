@@ -28,7 +28,6 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -36,6 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Pencil, 
   FileText, 
@@ -216,6 +216,10 @@ const OrderManagement = () => {
     return amount.toFixed(2) + ' TND';
   };
 
+  const handleGenerateInvoice = (orderId: string) => {
+    navigate(`/admin/invoices/${orderId}`);
+  };
+
   if (!user || !isAdmin) {
     return null;
   }
@@ -226,9 +230,18 @@ const OrderManagement = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-sonoff-blue">Gestion des commandes</h1>
           
-          <Button variant="outline" onClick={() => navigate('/admin')}>
-            Retour au dashboard
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" onClick={() => navigate('/admin')}>
+                  Retour au dashboard
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Retourner au tableau de bord d'administration</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         <div className="mb-6 flex justify-between items-center">
@@ -302,15 +315,24 @@ const OrderManagement = () => {
                       <div className="flex justify-end gap-2">
                         {/* View/Edit Order Details */}
                         <Dialog>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => setCurrentOrder(order)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="icon"
+                                    onClick={() => setCurrentOrder(order)}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Modifier la commande</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <DialogContent className="max-w-3xl">
                             <DialogHeader>
                               <DialogTitle>Détails de la commande</DialogTitle>
@@ -440,12 +462,22 @@ const OrderManagement = () => {
                                   <DialogClose asChild>
                                     <Button variant="outline">Fermer</Button>
                                   </DialogClose>
-                                  <Button 
-                                    onClick={() => navigate(`/admin/invoices/${currentOrder.id}`)}
-                                  >
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    Générer facture
-                                  </Button>
+                                  
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          onClick={() => handleGenerateInvoice(currentOrder.id)}
+                                        >
+                                          <FileText className="mr-2 h-4 w-4" />
+                                          Générer facture
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Générer une facture pour cette commande</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </div>
                               </div>
                             )}
@@ -453,13 +485,22 @@ const OrderManagement = () => {
                         </Dialog>
                         
                         {/* Generate Invoice */}
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => navigate(`/admin/invoices/${order.id}`)}
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                size="icon"
+                                onClick={() => handleGenerateInvoice(order.id)}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Générer une facture</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>

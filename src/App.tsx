@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -25,6 +26,10 @@ import CMSManagement from "./pages/admin/CMSManagement";
 import OrderManagement from "./pages/admin/OrderManagement";
 import CategoryManagement from "./pages/admin/CategoryManagement";
 import SerialNumberManagement from "./pages/admin/SerialNumberManagement";
+import ProductManagement from "./pages/admin/ProductManagement";
+import InvoiceManagement from "./pages/admin/InvoiceManagement"; 
+import InvoiceGenerator from "./pages/admin/InvoiceGenerator";
+import SalesManagement from "./pages/admin/SalesManagement";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +64,10 @@ const App = () => (
               <Route path="/admin/orders" element={<OrderManagement />} />
               <Route path="/admin/categories" element={<CategoryManagement />} />
               <Route path="/admin/serial-numbers" element={<SerialNumberManagement />} />
+              <Route path="/admin/products" element={<ProductManagement />} />
+              <Route path="/admin/invoices" element={<InvoiceManagement />} />
+              <Route path="/admin/invoices/:orderId" element={<InvoiceGenerator />} />
+              <Route path="/admin/sales" element={<SalesManagement />} />
               
               {/* Catch-all route for 404 */}
               <Route path="*" element={<NotFound />} />
