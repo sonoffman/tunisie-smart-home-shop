@@ -20,7 +20,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -35,7 +34,10 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Download, FileText, Plus, Search } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import jsPDF from 'jspdf';
+// @ts-ignore
 import 'jspdf-autotable';
+
+type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
 
 interface Order {
   id: string;
@@ -43,7 +45,7 @@ interface Order {
   customer_name: string;
   customer_phone: string;
   total_amount: number;
-  status: 'new' | 'pending' | 'validated' | 'cancelled';
+  status: OrderStatus;
 }
 
 const InvoiceManagement = () => {
@@ -82,7 +84,8 @@ const InvoiceManagement = () => {
       
       // Ajouter le filtre de statut si différent de 'all'
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        // Fix type issue by explicitly casting the statusFilter to OrderStatus when it's not 'all'
+        query = query.eq('status', statusFilter as OrderStatus);
       }
       
       // Exécuter la requête

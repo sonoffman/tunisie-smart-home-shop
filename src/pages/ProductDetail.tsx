@@ -62,7 +62,14 @@ const ProductDetail = () => {
         
         setProduct(productData);
         setMainImage(data.main_image_url);
-        setAdditionalImages(Array.isArray(data.additional_images) ? data.additional_images : []);
+        
+        // Fix type issue by ensuring we convert additional_images to string array
+        if (Array.isArray(data.additional_images)) {
+          const stringImages = data.additional_images.map(img => String(img));
+          setAdditionalImages(stringImages);
+        } else {
+          setAdditionalImages([]);
+        }
       } else {
         // Produit non trouvé, utiliser les données fictives
         const dummyProduct = getProductById(productId);
@@ -170,8 +177,8 @@ const ProductDetail = () => {
             {/* Image principale */}
             <div className="rounded-lg overflow-hidden shadow-md h-[400px]">
               <img 
-                src={mainImage || product.imageUrl} 
-                alt={product.name} 
+                src={mainImage || product?.imageUrl} 
+                alt={product?.name} 
                 className="w-full h-full object-contain"
               />
             </div>
@@ -189,7 +196,7 @@ const ProductDetail = () => {
                   >
                     <img 
                       src={img} 
-                      alt={`${product.name} - vue ${idx + 1}`} 
+                      alt={`${product?.name} - vue ${idx + 1}`} 
                       className="w-full h-full object-cover"
                     />
                   </div>

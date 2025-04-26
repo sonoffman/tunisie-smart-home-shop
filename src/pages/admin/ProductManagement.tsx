@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,8 +19,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -159,11 +156,11 @@ const ProductManagement = () => {
 
       if (error) throw error;
 
-      const formattedProducts = data.map((product) => ({
+      const formattedProducts: Product[] = data.map((product) => ({
         ...product,
         category_name: product.categories?.name,
         additional_images: Array.isArray(product.additional_images) 
-          ? product.additional_images 
+          ? product.additional_images.map(img => String(img))
           : []
       }));
 
@@ -199,7 +196,6 @@ const ProductManagement = () => {
 
   const handleAddProduct = async (formData: ProductFormValues) => {
     try {
-      // Upload main image if provided
       let mainImageUrl = null;
       if (mainImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -215,7 +211,6 @@ const ProductManagement = () => {
         mainImageUrl = urlData.publicUrl;
       }
 
-      // Upload additional images if provided
       const additionalImagesUrls = [];
       for (const file of additionalImageFiles) {
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -231,7 +226,6 @@ const ProductManagement = () => {
         additionalImagesUrls.push(urlData.publicUrl);
       }
 
-      // Add product to database
       const { error } = await supabase.from('products').insert([
         {
           name: formData.name,
@@ -253,7 +247,6 @@ const ProductManagement = () => {
         description: "Le produit a été ajouté avec succès",
       });
 
-      // Reset form and state
       form.reset();
       setMainImageFile(null);
       setAdditionalImageFiles([]);
@@ -261,7 +254,6 @@ const ProductManagement = () => {
       setAdditionalImagePreviews([]);
       setIsAddDialogOpen(false);
       
-      // Refresh products list
       fetchProducts();
     } catch (error: any) {
       toast({
@@ -276,7 +268,6 @@ const ProductManagement = () => {
     if (!currentProduct) return;
 
     try {
-      // Upload main image if a new one is provided
       let mainImageUrl = currentProduct.main_image_url;
       if (mainImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -292,10 +283,8 @@ const ProductManagement = () => {
         mainImageUrl = urlData.publicUrl;
       }
 
-      // Process additional images
       let additionalImagesUrls = currentProduct.additional_images || [];
       
-      // Upload new additional images if provided
       if (additionalImageFiles.length > 0) {
         const newUrls = [];
         for (const file of additionalImageFiles) {
@@ -311,11 +300,9 @@ const ProductManagement = () => {
             
           newUrls.push(urlData.publicUrl);
         }
-        // Add new URLs to existing ones (up to a maximum of 3)
         additionalImagesUrls = [...additionalImagesUrls, ...newUrls].slice(0, 3);
       }
 
-      // Update product in database
       const { error } = await supabase
         .from('products')
         .update({
@@ -338,7 +325,6 @@ const ProductManagement = () => {
         description: "Le produit a été mis à jour avec succès",
       });
 
-      // Reset state
       setCurrentProduct(null);
       setMainImageFile(null);
       setAdditionalImageFiles([]);
@@ -346,7 +332,6 @@ const ProductManagement = () => {
       setAdditionalImagePreviews([]);
       setIsEditDialogOpen(false);
       
-      // Refresh products list
       fetchProducts();
     } catch (error: any) {
       toast({
@@ -390,7 +375,6 @@ const ProductManagement = () => {
       const file = e.target.files[0];
       setMainImageFile(file);
       
-      // Preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setMainImagePreview(reader.result as string);
@@ -401,11 +385,9 @@ const ProductManagement = () => {
 
   const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      // Limit to 3 additional images
       const files = Array.from(e.target.files).slice(0, 3);
       setAdditionalImageFiles(files);
       
-      // Previews
       const previews: string[] = [];
       files.forEach((file) => {
         const reader = new FileReader();
@@ -575,7 +557,6 @@ const ProductManagement = () => {
           </Table>
         </div>
 
-        {/* Dialog pour ajouter un produit */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -807,7 +788,6 @@ const ProductManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog pour éditer un produit */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -1039,7 +1019,6 @@ const ProductManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog pour confirmer la suppression */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>
             <DialogHeader>

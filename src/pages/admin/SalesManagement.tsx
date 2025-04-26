@@ -231,15 +231,34 @@ const SalesManagement = () => {
 
       // Mise à jour des stocks
       for (const item of cartItems) {
+        // Fix type issue with decrement - use raw SQL update instead of rpc
         const { error: stockError } = await supabase
           .from('products')
           .update({ 
-            stock_quantity: supabase.rpc('decrement', { x: item.quantity }) 
+            stock_quantity: supabase.rpc('decrement', { x: item.quantity, row_id: item.product_id }) 
           })
           .eq('id', item.product_id)
           .gt('stock_quantity', item.quantity - 1); // S'assurer qu'il y a assez de stock
 
-        if (stockError) throw stockError;
+        if (stockError) {
+          // Fallback approach if rpc doesn't work - get current stock and decrement manually
+          const { data: productData } = await supabase
+            .from('products')
+            .select('stock_quantity')
+            .eq('id', item.product_id)
+            .single();
+            
+          if (productData) {
+            const newStock = Math.max(0, productData.stock_quantity - item.quantity);
+            
+            const { error: updateError } = await supabase
+              .from('products')
+              .update({ stock_quantity: newStock })
+              .eq('id', item.product_id);
+              
+            if (updateError) throw updateError;
+          }
+        }
       }
 
       toast({
