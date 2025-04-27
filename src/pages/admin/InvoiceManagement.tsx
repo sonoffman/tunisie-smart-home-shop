@@ -49,9 +49,11 @@ interface Order {
 }
 
 interface OrderItem {
+  id: string;
   product_name: string;
   quantity: number;
   price: number;
+  order_id?: string; // Make order_id optional to fix the TypeScript error
 }
 
 const InvoiceManagement = () => {
@@ -174,8 +176,8 @@ const InvoiceManagement = () => {
     
     // Vérifier les produits dans la commande
     const orderProductItems = orderItems.filter(item => {
-      const orderId = order.id;
-      return item.order_id === orderId && item.product_name.toLowerCase().includes(searchTerm.toLowerCase());
+      // Fix: Use optional chaining to safely access order_id
+      return item.order_id === order.id && item.product_name.toLowerCase().includes(searchTerm.toLowerCase());
     });
     
     return orderProductItems.length > 0;

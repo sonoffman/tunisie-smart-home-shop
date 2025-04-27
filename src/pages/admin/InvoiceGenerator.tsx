@@ -1,185 +1,193 @@
-
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, Download, ArrowLeft } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { ArrowLeft, Download, Save, Printer } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
-// Extend jsPDF with autoTable
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
+type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
+
+interface Order {
+  id: string;
+  created_at: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
+  total_amount: number;
+  status: OrderStatus;
 }
 
 interface OrderItem {
-  id: string;
   product_name: string;
   quantity: number;
   price: number;
 }
 
-interface Order {
-  id: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_address: string;
-  created_at: string;
-  total_amount: number;
-  status: string;
-}
-
 const InvoiceGenerator = () => {
+  const { user, isAdmin } = useAuth();
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
-    if (orderId) {
-      fetchOrderDetails(orderId);
+    if (user === null || !isAdmin) {
+      navigate('/');
+      toast({
+        title: "Accès refusé",
+        description: user === null 
+          ? "Vous devez être connecté pour accéder à cette page." 
+          : "Vous n'avez pas les droits d'administrateur.",
+        variant: "destructive",
+      });
+    } else {
+      fetchOrder();
+      fetchOrderItems();
     }
-  }, [orderId]);
-  
-  const fetchOrderDetails = async (id: string) => {
+  }, [user, isAdmin, navigate, toast, orderId]);
+
+  const fetchOrder = async () => {
     try {
       setLoading(true);
-      
-      // Fetch order details
-      const { data: orderData, error: orderError } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .select('*')
-        .eq('id', id)
+        .eq('id', orderId)
         .single();
-        
-      if (orderError) throw orderError;
-      
-      if (orderData) {
-        setOrder(orderData);
-        
-        // Fetch order items
-        const { data: itemsData, error: itemsError } = await supabase
-          .from('order_items')
-          .select('*')
-          .eq('order_id', id);
-          
-        if (itemsError) throw itemsError;
-        
-        if (itemsData) {
-          setOrderItems(itemsData);
-        }
-      }
+
+      if (error) throw error;
+      setOrder(data);
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: `Impossible de charger les détails de la commande: ${error.message}`,
+        description: `Impossible de charger la commande: ${error.message}`,
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-  
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR');
-  };
-  
-  const formatCurrency = (amount: number) => {
-    return `${amount.toFixed(2)} DT`;
-  };
-  
-  const handleGoBack = () => {
-    navigate(-1);
-  };
-  
-  const generateInvoicePDF = () => {
-    if (!order) return;
-    
+
+  const fetchOrderItems = async () => {
     try {
-      // Create PDF document
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+
+      if (error) throw error;
+      setOrderItems(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de charger les éléments de la commande: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return `${amount.toFixed(2)} TND`;
+  };
+
+  const generatePDF = async () => {
+    try {
+      // Create a new jsPDF instance
       const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Add company header
+      // Company logo and info
       doc.setFontSize(20);
-      doc.setTextColor(36, 99, 165); // sonoff-blue
-      doc.text('SONOFF Store', pageWidth / 2, 15, { align: 'center' });
+      doc.setTextColor(0, 71, 187); // Sonoff blue
+      doc.text('SONOFF TUNISIE', 105, 20, { align: 'center' });
       
       doc.setFontSize(10);
       doc.setTextColor(100);
-      doc.text('Tunis, Tunisie', pageWidth / 2, 20, { align: 'center' });
-      doc.text('contact@sonoff-store.tn', pageWidth / 2, 25, { align: 'center' });
-      doc.text('+216 55 123 456', pageWidth / 2, 30, { align: 'center' });
+      doc.text('123 Rue de l\'Innovation, Tunis 1001, Tunisie', 105, 27, { align: 'center' });
+      doc.text('Tel: +216 71 234 567 | Email: info@sonoff-tunisie.com', 105, 32, { align: 'center' });
       
-      // Add invoice title
+      // Invoice title and number
       doc.setFontSize(16);
       doc.setTextColor(0);
-      doc.text('FACTURE', pageWidth / 2, 40, { align: 'center' });
+      doc.text(`FACTURE #${order?.id?.slice(0, 8).toUpperCase() || 'N/A'}`, 105, 45, { align: 'center' });
       
-      // Add invoice info
+      // Customer info
       doc.setFontSize(11);
-      doc.text(`N° Facture: INV-${order.id.substring(0, 8)}`, 15, 50);
-      doc.text(`Date: ${formatDate(order.created_at)}`, 15, 55);
+      doc.text('Client:', 15, 60);
+      doc.text(`Nom: ${order?.customer_name || 'N/A'}`, 15, 65);
+      doc.text(`Téléphone: ${order?.customer_phone || 'N/A'}`, 15, 70);
+      doc.text(`Adresse: ${order?.customer_address || 'N/A'}`, 15, 75);
       
-      // Add customer info
-      doc.setFontSize(12);
-      doc.text('Informations client:', 15, 65);
-      doc.setFontSize(11);
-      doc.text(`Nom: ${order.customer_name}`, 15, 70);
-      doc.text(`Téléphone: ${order.customer_phone}`, 15, 75);
-      doc.text(`Adresse: ${order.customer_address}`, 15, 80);
+      // Date info
+      doc.text('Date de facture:', 140, 60);
+      doc.text(`${order ? formatDate(order.created_at) : 'N/A'}`, 140, 65);
       
-      // Add item table
+      // Items table
       const tableColumn = ["Produit", "Quantité", "Prix unitaire", "Total"];
       const tableRows: any[] = [];
       
+      let subtotal = 0;
+      
       orderItems.forEach(item => {
-        const itemData = [
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        
+        tableRows.push([
           item.product_name,
           item.quantity,
-          formatCurrency(item.price),
-          formatCurrency(item.price * item.quantity)
-        ];
-        tableRows.push(itemData);
+          `${item.price.toFixed(2)} TND`,
+          `${itemTotal.toFixed(2)} TND`
+        ]);
       });
       
-      // Generate table
-      doc.autoTable({
+      // Make sure autoTable is properly used
+      (doc as any).autoTable({
         head: [tableColumn],
         body: tableRows,
         startY: 90,
-        styles: { fontSize: 10 }
+        styles: { fontSize: 10 },
+        headStyles: { fillColor: [0, 71, 187] }
       });
       
-      // Add total
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(11);
-      doc.text(`Total: ${formatCurrency(order.total_amount)}`, pageWidth - 40, finalY);
+      const finalY = (doc as any).lastAutoTable.finalY;
       
-      // Add footer
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      const footerY = doc.internal.pageSize.getHeight() - 10;
-      doc.text('Merci pour votre confiance!', pageWidth / 2, footerY - 5, { align: 'center' });
-      doc.text('SONOFF Store - Le meilleur de la domotique en Tunisie', pageWidth / 2, footerY, { align: 'center' });
+      // Total amount
+      doc.line(14, finalY + 10, 196, finalY + 10);
+      doc.text('Sous-total:', 130, finalY + 20);
+      doc.text(`${subtotal.toFixed(2)} TND`, 175, finalY + 20);
+      doc.text('TVA (19%):', 130, finalY + 25);
+      doc.text(`${(subtotal * 0.19).toFixed(2)} TND`, 175, finalY + 25);
+      doc.line(130, finalY + 27, 195, finalY + 27);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total:', 130, finalY + 35);
+      doc.text(`${(subtotal * 1.19).toFixed(2)} TND`, 175, finalY + 35);
       
       // Save the PDF
-      doc.save(`facture-${order.id.substring(0, 8)}.pdf`);
+      doc.save(`facture-${order?.id?.slice(0, 8) || 'sonoff'}.pdf`);
       
       toast({
         title: "Succès",
         description: "La facture a été générée avec succès",
       });
     } catch (error: any) {
+      console.error("PDF generation error:", error);
       toast({
         title: "Erreur",
         description: `Impossible de générer la facture: ${error.message}`,
@@ -187,126 +195,96 @@ const InvoiceGenerator = () => {
       });
     }
   };
-  
-  if (loading) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Chargement...</h1>
-          </div>
-        </div>
-      </Layout>
-    );
+
+  if (!user || !isAdmin) {
+    return null;
   }
-  
-  if (!order) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Commande non trouvée</h1>
-            <Button onClick={handleGoBack}>Retour</Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
-  
+
   return (
     <Layout>
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-sonoff-blue">Facture</h1>
+          <h1 className="text-3xl font-bold text-sonoff-blue">
+            Facture #{order?.id?.slice(0, 8).toUpperCase() || 'N/A'}
+          </h1>
           
-          <Button variant="outline" onClick={handleGoBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Retour
+          <Button variant="outline" onClick={() => navigate('/admin/invoices')}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des factures
           </Button>
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Commande #{order.id.substring(0, 8)}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Client info */}
-                  <div>
-                    <h3 className="font-semibold mb-2">Client</h3>
-                    <p>{order.customer_name}</p>
-                    <p className="text-sm text-gray-600">{order.customer_phone}</p>
-                    <p className="text-sm text-gray-600">{order.customer_address}</p>
-                  </div>
-                  
-                  {/* Order info */}
-                  <div>
-                    <h3 className="font-semibold mb-2">Détails de la commande</h3>
-                    <p className="text-sm text-gray-600">Date: {formatDate(order.created_at)}</p>
-                    <p className="text-sm text-gray-600">Statut: <span className="font-medium capitalize">{order.status}</span></p>
-                    <p className="mt-2 text-lg font-bold text-sonoff-blue">Total: {formatCurrency(order.total_amount)}</p>
-                  </div>
-                </div>
-                
-                {/* Items */}
-                <div className="mt-8">
-                  <h3 className="font-semibold mb-2">Articles</h3>
-                  <div className="border rounded-md overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-2 text-left">Produit</th>
-                          <th className="px-4 py-2 text-right">Prix unitaire</th>
-                          <th className="px-4 py-2 text-right">Quantité</th>
-                          <th className="px-4 py-2 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {orderItems.map((item) => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-3">{item.product_name}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(item.price)}</td>
-                            <td className="px-4 py-3 text-right">{item.quantity}</td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(item.price * item.quantity)}</td>
-                          </tr>
-                        ))}
-                        <tr className="bg-gray-50 font-bold">
-                          <td className="px-4 py-3" colSpan={3}>Total</td>
-                          <td className="px-4 py-3 text-right">{formatCurrency(order.total_amount)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+
+        {loading ? (
+          <div className="text-center py-10">
+            <p>Chargement...</p>
           </div>
-          
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button 
-                  className="w-full bg-sonoff-blue hover:bg-sonoff-teal" 
-                  onClick={generateInvoicePDF}
-                >
-                  <FileText className="mr-2 h-4 w-4" /> Générer PDF
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={handleGoBack}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Retour
-                </Button>
-              </CardContent>
-            </Card>
+        ) : order ? (
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Informations de la commande</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <strong>Client:</strong> {order.customer_name}
+                </div>
+                <div>
+                  <strong>Téléphone:</strong> {order.customer_phone}
+                </div>
+                <div>
+                  <strong>Adresse:</strong> {order.customer_address}
+                </div>
+                <div>
+                  <strong>Date de la commande:</strong> {formatDate(order.created_at)}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <h2 className="text-xl font-semibold mb-4">Éléments de la commande</h2>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produit</TableHead>
+                    <TableHead>Quantité</TableHead>
+                    <TableHead>Prix unitaire</TableHead>
+                    <TableHead>Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orderItems.map((item) => (
+                    <TableRow key={item.product_name}>
+                      <TableCell>{item.product_name}</TableCell>
+                      <TableCell>{item.quantity}</TableCell>
+                      <TableCell>{formatCurrency(item.price)}</TableCell>
+                      <TableCell>{formatCurrency(item.price * item.quantity)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="p-6 border-t">
+              <div className="text-right">
+                <h3 className="text-lg font-semibold">
+                  Total: {formatCurrency(order.total_amount)}
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-6 border-t flex justify-end gap-4">
+              <Button variant="outline" onClick={() => window.print()}>
+                <Printer className="mr-2 h-4 w-4" />
+                Imprimer
+              </Button>
+              <Button className="bg-sonoff-blue hover:bg-sonoff-teal" onClick={generatePDF}>
+                <Download className="mr-2 h-4 w-4" />
+                Générer PDF
+              </Button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center py-10">
+            <p>Commande non trouvée.</p>
+          </div>
+        )}
       </div>
     </Layout>
   );

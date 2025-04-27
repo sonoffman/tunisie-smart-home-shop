@@ -21,7 +21,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (!productBucketExists) {
           await supabase.storage.createBucket('product-images', {
             public: true,
+            fileSizeLimit: 10485760, // 10MB
           });
+          console.log("Bucket 'product-images' créé avec succès");
         }
         
         // Bucket pour les bannières
@@ -30,7 +32,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (!bannerBucketExists) {
           await supabase.storage.createBucket('banners', {
             public: true,
+            fileSizeLimit: 10485760, // 10MB
           });
+          console.log("Bucket 'banners' créé avec succès");
         }
       } catch (error) {
         console.error("Erreur lors de la vérification des buckets:", error);

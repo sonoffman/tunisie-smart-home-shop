@@ -1,18 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -94,7 +86,8 @@ const SalesManagement = () => {
   // Filtrer les produits selon le terme de recherche
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (!user || !isAdmin) {
@@ -141,7 +134,7 @@ const SalesManagement = () => {
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input
-                placeholder="Rechercher par nom de produit ou catégorie"
+                placeholder="Rechercher par nom, description ou catégorie"
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
