@@ -15,26 +15,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     // Vérifier et créer les buckets nécessaires au démarrage de l'application
     const checkAndCreateBuckets = async () => {
       try {
-        // Bucket pour les images de produits
-        const { data: productBucketExists } = await supabase.storage.getBucket('product-images');
+        console.log("Checking and creating storage buckets...");
         
-        if (!productBucketExists) {
+        // Bucket pour les images de produits
+        const { data: productBucketExists, error: productBucketError } = await supabase.storage.getBucket('product-images');
+        
+        if (productBucketError || !productBucketExists) {
+          console.log("Creating product-images bucket...");
           await supabase.storage.createBucket('product-images', {
             public: true,
             fileSizeLimit: 10485760, // 10MB
           });
           console.log("Bucket 'product-images' créé avec succès");
+        } else {
+          console.log("Bucket 'product-images' already exists");
         }
         
         // Bucket pour les bannières
-        const { data: bannerBucketExists } = await supabase.storage.getBucket('banners');
+        const { data: bannerBucketExists, error: bannerBucketError } = await supabase.storage.getBucket('banners');
         
-        if (!bannerBucketExists) {
+        if (bannerBucketError || !bannerBucketExists) {
+          console.log("Creating banners bucket...");
           await supabase.storage.createBucket('banners', {
             public: true,
             fileSizeLimit: 10485760, // 10MB
           });
           console.log("Bucket 'banners' créé avec succès");
+        } else {
+          console.log("Bucket 'banners' already exists");
         }
       } catch (error) {
         console.error("Erreur lors de la vérification des buckets:", error);

@@ -1,9 +1,20 @@
+
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Save, Printer } from 'lucide-react';
 import { jsPDF } from 'jspdf';
@@ -156,7 +167,7 @@ const InvoiceGenerator = () => {
         ]);
       });
       
-      // Make sure autoTable is properly used
+      // Fix for the autoTable error - using the jspdf-autotable properly
       (doc as any).autoTable({
         head: [tableColumn],
         body: tableRows,
