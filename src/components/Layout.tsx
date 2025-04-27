@@ -20,28 +20,38 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         // Bucket pour les images de produits
         const { data: productBucketExists, error: productBucketError } = await supabase.storage.getBucket('product-images');
         
-        if (productBucketError || !productBucketExists) {
+        if (productBucketError && productBucketError.message.includes('not found')) {
           console.log("Creating product-images bucket...");
-          await supabase.storage.createBucket('product-images', {
+          const { data, error } = await supabase.storage.createBucket('product-images', {
             public: true,
             fileSizeLimit: 10485760, // 10MB
           });
-          console.log("Bucket 'product-images' créé avec succès");
-        } else {
+          
+          if (error) {
+            console.error("Error creating product-images bucket:", error);
+          } else {
+            console.log("Bucket 'product-images' créé avec succès");
+          }
+        } else if (productBucketExists) {
           console.log("Bucket 'product-images' already exists");
         }
         
         // Bucket pour les bannières
         const { data: bannerBucketExists, error: bannerBucketError } = await supabase.storage.getBucket('banners');
         
-        if (bannerBucketError || !bannerBucketExists) {
+        if (bannerBucketError && bannerBucketError.message.includes('not found')) {
           console.log("Creating banners bucket...");
-          await supabase.storage.createBucket('banners', {
+          const { data, error } = await supabase.storage.createBucket('banners', {
             public: true,
             fileSizeLimit: 10485760, // 10MB
           });
-          console.log("Bucket 'banners' créé avec succès");
-        } else {
+          
+          if (error) {
+            console.error("Error creating banners bucket:", error);
+          } else {
+            console.log("Bucket 'banners' créé avec succès");
+          }
+        } else if (bannerBucketExists) {
           console.log("Bucket 'banners' already exists");
         }
       } catch (error) {
@@ -56,7 +66,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-grow">{children}</main>
-      <ContactFooter />
       <Footer />
     </div>
   );

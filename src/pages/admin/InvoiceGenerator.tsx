@@ -17,8 +17,9 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Save, Printer } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
 
@@ -167,8 +168,8 @@ const InvoiceGenerator = () => {
         ]);
       });
       
-      // Fix for the autoTable error - using the jspdf-autotable properly
-      (doc as any).autoTable({
+      // Use autoTable correctly
+      autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
         startY: 90,
