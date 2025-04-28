@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +19,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Eye, Search, Settings } from 'lucide-react';
+import { ArrowLeft, Eye, Search, Settings, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
@@ -62,6 +62,7 @@ const OrderManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>('new');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -144,6 +145,11 @@ const OrderManagement = () => {
     setIsStatusDialogOpen(true);
   };
 
+  const handleDeleteOrder = (order: Order) => {
+    setCurrentOrder(order);
+    setIsDeleteDialogOpen(true);
+  };
+
   const updateOrderStatus = async () => {
     if (!currentOrder) return;
 
@@ -166,6 +172,42 @@ const OrderManagement = () => {
       toast({
         title: "Erreur",
         description: `Impossible de mettre à jour le statut: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteOrder = async () => {
+    if (!currentOrder) return;
+
+    try {
+      // D'abord supprimer tous les éléments de commande associés
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .delete()
+        .eq('order_id', currentOrder.id);
+
+      if (itemsError) throw itemsError;
+
+      // Ensuite supprimer la commande elle-même
+      const { error: orderError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', currentOrder.id);
+
+      if (orderError) throw orderError;
+
+      toast({
+        title: "Commande supprimée",
+        description: "La commande a été supprimée avec succès",
+      });
+
+      setIsDeleteDialogOpen(false);
+      fetchOrders();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de supprimer la commande: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -340,6 +382,24 @@ const OrderManagement = () => {
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="text-red-500 hover:text-red-700"
+                                onClick={() => handleDeleteOrder(order)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Supprimer la commande</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -467,6 +527,41 @@ const OrderManagement = () => {
                 Sauvegarder
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog pour supprimer une commande */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-red-600">Supprimer la commande</DialogTitle>
+              <DialogDescription>
+                Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {currentOrder && (
+              <div className="py-4">
+                <p><span className="font-medium">Client:</span> {currentOrder.customer_name}</p>
+                <p><span className="font-medium">Date:</span> {formatDate(currentOrder.created_at)}</p>
+                <p><span className="font-medium">Total:</span> {formatCurrency(currentOrder.total_amount)}</p>
+              </div>
+            )}
+            
+            <DialogFooter className="flex justify-end space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Annuler
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={deleteOrder}
+              >
+                Supprimer définitivement
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

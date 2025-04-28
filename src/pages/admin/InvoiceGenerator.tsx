@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,13 +7,12 @@ import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TableCell,
   TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Download, Save, Printer } from 'lucide-react';
@@ -34,21 +33,46 @@ interface Order {
 }
 
 interface OrderItem {
+  id: string;
+  order_id: string;
   product_name: string;
   quantity: number;
   price: number;
 }
 
+interface InvoiceSettings {
+  header_text: string;
+  footer_text: string;
+  company_name: string;
+  company_address: string;
+  company_phone: string;
+  company_email: string;
+  tax_id: string;
+  logo_url?: string;
+  signature_url?: string;
+}
+
 const InvoiceGenerator = () => {
-  const { user, isAdmin } = useAuth();
   const { orderId } = useParams<{ orderId: string }>();
+  const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
   const [order, setOrder] = useState<Order | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
+    header_text: 'Facture',
+    footer_text: 'Merci pour votre achat',
+    company_name: 'SONOFF Tunisie',
+    company_address: 'Tunis, Tunisie',
+    company_phone: '+216 XX XXX XXX',
+    company_email: 'contact@sonoff-tunisie.com',
+    tax_id: '',
+  });
+  
   useEffect(() => {
+    // Rediriger si l'utilisateur n'est pas connecté ou pas admin
     if (user === null || !isAdmin) {
       navigate('/');
       toast({
@@ -58,52 +82,74 @@ const InvoiceGenerator = () => {
           : "Vous n'avez pas les droits d'administrateur.",
         variant: "destructive",
       });
-    } else {
-      fetchOrder();
-      fetchOrderItems();
+      return;
     }
-  }, [user, isAdmin, navigate, toast, orderId]);
+    
+    if (orderId) {
+      fetchOrder();
+      fetchInvoiceSettings();
+    } else {
+      navigate('/admin');
+    }
+  }, [user, isAdmin, orderId, navigate, toast]);
 
   const fetchOrder = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Récupérer les détails de la commande
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('*')
         .eq('id', orderId)
         .single();
-
-      if (error) throw error;
-      setOrder(data);
+      
+      if (orderError) throw orderError;
+      
+      // Récupérer les articles de la commande
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+      
+      if (itemsError) throw itemsError;
+      
+      setOrder(orderData);
+      setOrderItems(itemsData || []);
+      
     } catch (error: any) {
       toast({
         title: "Erreur",
         description: `Impossible de charger la commande: ${error.message}`,
         variant: "destructive",
       });
+      navigate('/admin');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchOrderItems = async () => {
+  const fetchInvoiceSettings = async () => {
     try {
-      setLoading(true);
+      // Récupérer les paramètres de facture depuis cms_pages
       const { data, error } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId);
-
-      if (error) throw error;
-      setOrderItems(data || []);
+        .from('cms_pages')
+        .select('content')
+        .eq('slug', 'invoice_settings')
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data && data.content) {
+        try {
+          const settings = JSON.parse(data.content);
+          setInvoiceSettings(settings);
+        } catch (parseError) {
+          console.error("Erreur de parsing des paramètres de facture:", parseError);
+        }
+      }
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: `Impossible de charger les éléments de la commande: ${error.message}`,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error("Erreur lors de la récupération des paramètres de facture:", error);
     }
   };
 
@@ -119,87 +165,127 @@ const InvoiceGenerator = () => {
     return `${amount.toFixed(2)} TND`;
   };
 
+  const generateInvoiceNumber = (orderId: string, date: Date) => {
+    // Extraire les 6 premiers caractères de l'ID de commande
+    const shortId = orderId.substring(0, 6).toUpperCase();
+    
+    // Formatter la date au format YYYYMMDD
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `INV-${year}${month}${day}-${shortId}`;
+  };
+
   const generatePDF = async () => {
+    if (!order) return;
+    
     try {
-      // Create a new jsPDF instance
+      // Créer un nouveau document PDF
       const doc = new jsPDF();
       
-      // Company logo and info
+      // Date de la commande
+      const orderDate = new Date(order.created_at);
+      
+      // Générer un numéro de facture
+      const invoiceNumber = generateInvoiceNumber(order.id, orderDate);
+      
+      // Marges
+      const margin = 15;
+      let y = margin;
+      
+      // Entête de la facture
       doc.setFontSize(20);
-      doc.setTextColor(0, 71, 187); // Sonoff blue
-      doc.text('SONOFF TUNISIE', 105, 20, { align: 'center' });
+      doc.setTextColor(0, 0, 0);
+      doc.text(invoiceSettings.header_text || "FACTURE", margin, y);
       
+      y += 10;
       doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text('123 Rue de l\'Innovation, Tunis 1001, Tunisie', 105, 27, { align: 'center' });
-      doc.text('Tel: +216 71 234 567 | Email: info@sonoff-tunisie.com', 105, 32, { align: 'center' });
+      doc.text(`N° ${invoiceNumber}`, margin, y);
       
-      // Invoice title and number
-      doc.setFontSize(16);
-      doc.setTextColor(0);
-      doc.text(`FACTURE #${order?.id?.slice(0, 8).toUpperCase() || 'N/A'}`, 105, 45, { align: 'center' });
+      y += 5;
+      doc.text(`Date: ${formatDate(order.created_at)}`, margin, y);
       
-      // Customer info
-      doc.setFontSize(11);
-      doc.text('Client:', 15, 60);
-      doc.text(`Nom: ${order?.customer_name || 'N/A'}`, 15, 65);
-      doc.text(`Téléphone: ${order?.customer_phone || 'N/A'}`, 15, 70);
-      doc.text(`Adresse: ${order?.customer_address || 'N/A'}`, 15, 75);
+      // Informations de l'entreprise
+      y += 15;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(invoiceSettings.company_name || "SONOFF Tunisie", margin, y);
       
-      // Date info
-      doc.text('Date de facture:', 140, 60);
-      doc.text(`${order ? formatDate(order.created_at) : 'N/A'}`, 140, 65);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      y += 5;
+      doc.text(invoiceSettings.company_address || "", margin, y);
+      y += 5;
+      doc.text(`Tél: ${invoiceSettings.company_phone || ""}`, margin, y);
+      y += 5;
+      doc.text(`Email: ${invoiceSettings.company_email || ""}`, margin, y);
       
-      // Items table
-      const tableColumn = ["Produit", "Quantité", "Prix unitaire", "Total"];
-      const tableRows: any[] = [];
+      if (invoiceSettings.tax_id) {
+        y += 5;
+        doc.text(`Matricule fiscal: ${invoiceSettings.tax_id}`, margin, y);
+      }
       
-      let subtotal = 0;
+      // Informations du client
+      y += 15;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text("Client:", margin, y);
       
-      orderItems.forEach(item => {
-        const itemTotal = item.price * item.quantity;
-        subtotal += itemTotal;
-        
-        tableRows.push([
-          item.product_name,
-          item.quantity,
-          `${item.price.toFixed(2)} TND`,
-          `${itemTotal.toFixed(2)} TND`
-        ]);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      y += 5;
+      doc.text(`Nom: ${order.customer_name}`, margin, y);
+      y += 5;
+      doc.text(`Téléphone: ${order.customer_phone}`, margin, y);
+      y += 5;
+      doc.text(`Adresse: ${order.customer_address}`, margin, y);
+      
+      // Tableau des articles
+      y += 15;
+      const tableColumn = [
+        { header: 'Article', dataKey: 'product' },
+        { header: 'Prix unitaire', dataKey: 'price' },
+        { header: 'Quantité', dataKey: 'quantity' },
+        { header: 'Total', dataKey: 'total' }
+      ];
+      
+      const tableRows = orderItems.map(item => {
+        return {
+          product: item.product_name,
+          price: formatCurrency(item.price),
+          quantity: item.quantity,
+          total: formatCurrency(item.price * item.quantity)
+        };
       });
       
-      // Use autoTable correctly
+      // Utiliser autoTable correctement
       autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: 90,
+        head: [tableColumn.map(col => col.header)],
+        body: tableRows.map(row => [row.product, row.price, row.quantity, row.total]),
+        startY: y,
         styles: { fontSize: 10 },
         headStyles: { fillColor: [0, 71, 187] }
       });
       
-      const finalY = (doc as any).lastAutoTable.finalY;
+      // Récupérer la position Y finale après le tableau
+      const finalY = (doc as any).lastAutoTable.finalY + 10;
       
-      // Total amount
-      doc.line(14, finalY + 10, 196, finalY + 10);
-      doc.text('Sous-total:', 130, finalY + 20);
-      doc.text(`${subtotal.toFixed(2)} TND`, 175, finalY + 20);
-      doc.text('TVA (19%):', 130, finalY + 25);
-      doc.text(`${(subtotal * 0.19).toFixed(2)} TND`, 175, finalY + 25);
-      doc.line(130, finalY + 27, 195, finalY + 27);
-      doc.setFontSize(12);
+      // Total de la commande
       doc.setFont('helvetica', 'bold');
-      doc.text('Total:', 130, finalY + 35);
-      doc.text(`${(subtotal * 1.19).toFixed(2)} TND`, 175, finalY + 35);
+      doc.setFontSize(12);
+      doc.text(`Total: ${formatCurrency(order.total_amount)}`, 150, finalY);
       
-      // Save the PDF
-      doc.save(`facture-${order?.id?.slice(0, 8) || 'sonoff'}.pdf`);
+      // Pied de page / Message de remerciement
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(invoiceSettings.footer_text || "Merci pour votre achat", margin, 270);
       
-      toast({
-        title: "Succès",
-        description: "La facture a été générée avec succès",
-      });
+      // Enregistrer le PDF
+      doc.save(`facture_${invoiceNumber}.pdf`);
+      
     } catch (error: any) {
-      console.error("PDF generation error:", error);
+      console.error("Erreur lors de la génération du PDF:", error);
       toast({
         title: "Erreur",
         description: `Impossible de générer la facture: ${error.message}`,
@@ -208,95 +294,147 @@ const InvoiceGenerator = () => {
     }
   };
 
-  if (!user || !isAdmin) {
-    return null;
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <p>Chargement...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!order) {
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="text-center">
+            <p>Commande non trouvée</p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/admin')}
+              className="mt-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" /> Retour au dashboard
+            </Button>
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
     <Layout>
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-sonoff-blue">
-            Facture #{order?.id?.slice(0, 8).toUpperCase() || 'N/A'}
-          </h1>
-          
-          <Button variant="outline" onClick={() => navigate('/admin/invoices')}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Retour à la liste des factures
-          </Button>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-10">
-            <p>Chargement...</p>
+          <div>
+            <h1 className="text-3xl font-bold text-sonoff-blue mb-2">Facture</h1>
+            <p className="text-gray-600">
+              Commande passée le {formatDate(order.created_at)} par {order.customer_name}
+            </p>
           </div>
-        ) : order ? (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Informations de la commande</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <strong>Client:</strong> {order.customer_name}
-                </div>
-                <div>
-                  <strong>Téléphone:</strong> {order.customer_phone}
-                </div>
-                <div>
-                  <strong>Adresse:</strong> {order.customer_address}
-                </div>
-                <div>
-                  <strong>Date de la commande:</strong> {formatDate(order.created_at)}
-                </div>
-              </div>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/admin/sales')}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Retour aux ventes
+            </Button>
+            
+            <Button 
+              className="bg-sonoff-blue hover:bg-sonoff-teal"
+              onClick={generatePDF}
+            >
+              <Download className="mr-2 h-4 w-4" /> Télécharger PDF
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                generatePDF();
+                setTimeout(() => window.print(), 100);
+              }}
+            >
+              <Printer className="mr-2 h-4 w-4" /> Imprimer
+            </Button>
+          </div>
+        </div>
+        
+        <div className="bg-white shadow-md rounded-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            {/* Informations de l'entreprise */}
+            <div>
+              <h2 className="text-xl font-bold mb-4">{invoiceSettings.company_name}</h2>
+              <p className="mb-1">{invoiceSettings.company_address}</p>
+              <p className="mb-1">Tél: {invoiceSettings.company_phone}</p>
+              <p className="mb-1">Email: {invoiceSettings.company_email}</p>
+              {invoiceSettings.tax_id && (
+                <p className="mb-1">Matricule fiscal: {invoiceSettings.tax_id}</p>
+              )}
             </div>
-
-            <div className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Éléments de la commande</h2>
+            
+            {/* Informations du client */}
+            <div>
+              <h2 className="text-xl font-bold mb-4">Client</h2>
+              <p className="mb-1"><span className="font-medium">Nom:</span> {order.customer_name}</p>
+              <p className="mb-1"><span className="font-medium">Téléphone:</span> {order.customer_phone}</p>
+              <p className="mb-1"><span className="font-medium">Adresse:</span> {order.customer_address}</p>
+              <p className="mb-1"><span className="font-medium">Date:</span> {formatDate(order.created_at)}</p>
+            </div>
+          </div>
+          
+          <div className="mb-8">
+            <h2 className="text-xl font-bold mb-4">Détails de la commande</h2>
+            <div className="overflow-x-auto">
               <Table>
+                <TableCaption>
+                  Facture générée le {new Date().toLocaleDateString()}
+                </TableCaption>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produit</TableHead>
-                    <TableHead>Quantité</TableHead>
-                    <TableHead>Prix unitaire</TableHead>
-                    <TableHead>Total</TableHead>
+                    <TableHead className="text-right">Prix unitaire</TableHead>
+                    <TableHead className="text-right">Quantité</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {orderItems.map((item) => (
-                    <TableRow key={item.product_name}>
+                    <TableRow key={item.id}>
                       <TableCell>{item.product_name}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{formatCurrency(item.price)}</TableCell>
-                      <TableCell>{formatCurrency(item.price * item.quantity)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
                     </TableRow>
                   ))}
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-right font-bold">
+                      Total
+                    </TableCell>
+                    <TableCell className="text-right font-bold">
+                      {formatCurrency(order.total_amount)}
+                    </TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
-
-            <div className="p-6 border-t">
-              <div className="text-right">
-                <h3 className="text-lg font-semibold">
-                  Total: {formatCurrency(order.total_amount)}
-                </h3>
+          </div>
+          
+          <div className="text-center text-gray-500 mt-12">
+            <p>{invoiceSettings.footer_text}</p>
+            
+            {invoiceSettings.signature_url && (
+              <div className="mt-8">
+                <img 
+                  src={invoiceSettings.signature_url} 
+                  alt="Signature" 
+                  className="h-20 mx-auto"
+                />
+                <p className="mt-2">Signature autorisée</p>
               </div>
-            </div>
-
-            <div className="p-6 border-t flex justify-end gap-4">
-              <Button variant="outline" onClick={() => window.print()}>
-                <Printer className="mr-2 h-4 w-4" />
-                Imprimer
-              </Button>
-              <Button className="bg-sonoff-blue hover:bg-sonoff-teal" onClick={generatePDF}>
-                <Download className="mr-2 h-4 w-4" />
-                Générer PDF
-              </Button>
-            </div>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-10">
-            <p>Commande non trouvée.</p>
-          </div>
-        )}
+        </div>
       </div>
     </Layout>
   );
