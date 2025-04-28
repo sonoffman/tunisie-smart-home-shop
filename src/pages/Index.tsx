@@ -79,7 +79,7 @@ const HomePage = () => {
           
           setProducts(formattedProducts);
         } else {
-          // If no products from DB, use empty array
+          // If no products from DB, use empty array (no sample products)
           setProducts([]);
         }
       } catch (error: any) {

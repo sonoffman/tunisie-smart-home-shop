@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -147,7 +146,6 @@ const ProductManagement = () => {
   }, [user, isAdmin, navigate, toast]);
 
   useEffect(() => {
-    // Filter products when search query changes
     if (!searchQuery.trim()) {
       setFilteredProducts(products);
     } else {
@@ -213,15 +211,12 @@ const ProductManagement = () => {
     }
   };
 
-  // Function to ensure buckets exist before upload
   const ensureBucketsExist = async () => {
     try {
-      // Get list of existing buckets
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) throw listError;
       
-      // Check if product-images bucket exists
       const productBucketExists = buckets?.some(bucket => bucket.name === 'product-images');
       
       if (!productBucketExists) {
@@ -244,14 +239,16 @@ const ProductManagement = () => {
 
   const handleAddProduct = async (formData: ProductFormValues) => {
     try {
-      // Ensure buckets exist before upload
       await ensureBucketsExist();
       
       let mainImageUrl = null;
       if (mainImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('product-images')
-          .upload(`${Date.now()}-${mainImageFile.name}`, mainImageFile);
+          .upload(`${Date.now()}-${mainImageFile.name}`, mainImageFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) throw uploadError;
         
@@ -266,7 +263,10 @@ const ProductManagement = () => {
       for (const file of additionalImageFiles) {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('product-images')
-          .upload(`${Date.now()}-${file.name}`, file);
+          .upload(`${Date.now()}-${file.name}`, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) throw uploadError;
         
@@ -319,14 +319,16 @@ const ProductManagement = () => {
     if (!currentProduct) return;
 
     try {
-      // Ensure buckets exist before upload
       await ensureBucketsExist();
       
       let mainImageUrl = currentProduct.main_image_url;
       if (mainImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('product-images')
-          .upload(`${Date.now()}-${mainImageFile.name}`, mainImageFile);
+          .upload(`${Date.now()}-${mainImageFile.name}`, mainImageFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) throw uploadError;
         
@@ -344,7 +346,10 @@ const ProductManagement = () => {
         for (const file of additionalImageFiles) {
           const { data: uploadData, error: uploadError } = await supabase.storage
             .from('product-images')
-            .upload(`${Date.now()}-${file.name}`, file);
+            .upload(`${Date.now()}-${file.name}`, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
 
           if (uploadError) throw uploadError;
           
