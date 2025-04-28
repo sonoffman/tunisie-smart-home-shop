@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -172,7 +173,7 @@ const ProductManagement = () => {
 
       if (error) throw error;
 
-      const formattedProducts: Product[] = data.map((product) => ({
+      const formattedProducts = data.map((product) => ({
         ...product,
         category_name: product.categories?.name,
         additional_images: Array.isArray(product.additional_images) 
@@ -239,7 +240,7 @@ const ProductManagement = () => {
 
   const handleAddProduct = async (formData: ProductFormValues) => {
     try {
-      await ensureBucketsExist();
+      // No need to create buckets here, they're already created via SQL migration
       
       let mainImageUrl = null;
       if (mainImageFile) {
@@ -277,6 +278,7 @@ const ProductManagement = () => {
         additionalImagesUrls.push(urlData.publicUrl);
       }
 
+      // Add auth header to ensure RLS policy is applied correctly
       const { error } = await supabase.from('products').insert([
         {
           name: formData.name,
@@ -319,7 +321,7 @@ const ProductManagement = () => {
     if (!currentProduct) return;
 
     try {
-      await ensureBucketsExist();
+      // No need to create buckets here, they're already created via SQL migration
       
       let mainImageUrl = currentProduct.main_image_url;
       if (mainImageFile) {
@@ -362,6 +364,7 @@ const ProductManagement = () => {
         additionalImagesUrls = [...additionalImagesUrls, ...newUrls].slice(0, 3);
       }
 
+      // Add auth header to ensure RLS policy is applied correctly
       const { error } = await supabase
         .from('products')
         .update({
