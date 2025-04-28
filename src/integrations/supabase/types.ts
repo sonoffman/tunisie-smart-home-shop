@@ -129,6 +129,33 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_info: {
+        Row: {
+          address: string
+          created_at: string
+          email: string
+          id: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          email: string
+          id?: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          email?: string
+          id?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_issues: {
         Row: {
           created_at: string
@@ -152,6 +179,33 @@ export type Database = {
           id?: string
           issue_description?: string
           resolved?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoice_settings: {
+        Row: {
+          created_at: string
+          footer_text: string
+          header_text: string
+          id: string
+          signature_image_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          footer_text: string
+          header_text: string
+          id?: string
+          signature_image_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          footer_text?: string
+          header_text?: string
+          id?: string
+          signature_image_url?: string | null
           updated_at?: string
         }
         Relationships: []

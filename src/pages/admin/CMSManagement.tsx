@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
+import { Editor } from '@/components/ui/editor';
 import {
   Table,
   TableBody,
@@ -42,7 +43,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Pencil, Trash2, Plus, Eye, Mail, Phone as PhoneIcon } from 'lucide-react';
-import { Editor } from '@/components/ui/editor';
 
 interface CmsPage {
   id: string;
@@ -208,12 +208,10 @@ const CMSManagement = () => {
     }
   }, [user, isAdmin, navigate, toast]);
 
-  // Function to ensure buckets exist before upload
   const ensureBucketsExist = async () => {
     try {
       console.log("Checking if buckets exist...");
       
-      // Get list of existing buckets
       const { data: buckets, error: listError } = await supabase.storage.listBuckets();
       
       if (listError) {
@@ -221,7 +219,6 @@ const CMSManagement = () => {
         throw listError;
       }
       
-      // Check if banners bucket exists
       const bannersBucketExists = buckets?.some(bucket => bucket.name === 'banners');
       
       if (!bannersBucketExists) {
@@ -239,7 +236,6 @@ const CMSManagement = () => {
         console.log("Bucket 'banners' created successfully");
       }
       
-      // Check if invoice-assets bucket exists
       const invoiceAssetsBucketExists = buckets?.some(bucket => bucket.name === 'invoice-assets');
       
       if (!invoiceAssetsBucketExists) {
@@ -377,7 +373,6 @@ const CMSManagement = () => {
   const handleEditContact = async (formData: ContactFormValues) => {
     try {
       if (contactInfo) {
-        // Update existing contact info
         const { error } = await supabase
           .from('contact_info')
           .update({
@@ -389,14 +384,13 @@ const CMSManagement = () => {
 
         if (error) throw error;
       } else {
-        // Insert new contact info
         const { error } = await supabase
           .from('contact_info')
-          .insert([{
+          .insert({
             phone: formData.phone,
             email: formData.email,
             address: formData.address
-          }]);
+          });
 
         if (error) throw error;
       }
@@ -419,10 +413,7 @@ const CMSManagement = () => {
 
   const handleEditInvoiceSettings = async (formData: InvoiceSettingsFormValues) => {
     try {
-      // Ensure buckets exist before upload
-      await ensureBucketsExist();
-      
-      let signatureImageUrl = invoiceSettings?.signature_image_url || null;
+      let imageUrl = invoiceSettings?.signature_image_url || null;
       
       if (signatureImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -435,30 +426,28 @@ const CMSManagement = () => {
           .from('invoice-assets')
           .getPublicUrl(uploadData.path);
           
-        signatureImageUrl = urlData.publicUrl;
+        imageUrl = urlData.publicUrl;
       }
 
       if (invoiceSettings) {
-        // Update existing invoice settings
         const { error } = await supabase
           .from('invoice_settings')
           .update({
             header_text: formData.header_text,
             footer_text: formData.footer_text,
-            signature_image_url: signatureImageUrl
+            signature_image_url: imageUrl
           })
           .eq('id', invoiceSettings.id);
 
         if (error) throw error;
       } else {
-        // Insert new invoice settings
         const { error } = await supabase
           .from('invoice_settings')
-          .insert([{
+          .insert({
             header_text: formData.header_text,
             footer_text: formData.footer_text,
-            signature_image_url: signatureImageUrl
-          }]);
+            signature_image_url: imageUrl
+          });
 
         if (error) throw error;
       }
@@ -483,7 +472,6 @@ const CMSManagement = () => {
 
   const handleAddBanner = async (formData: BannerFormValues) => {
     try {
-      // Ensure buckets exist before upload
       await ensureBucketsExist();
       
       let imageUrl = formData.image_url;
@@ -536,7 +524,6 @@ const CMSManagement = () => {
     if (!currentBanner) return;
     
     try {
-      // Ensure buckets exist before upload
       await ensureBucketsExist();
       
       let imageUrl = currentBanner.image_url;
@@ -624,13 +611,11 @@ const CMSManagement = () => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        // PGRST116 is "No rows returned" error code
         throw error;
       }
 
       setContactInfo(data || null);
       
-      // Initialize contact form with data if it exists
       if (data) {
         contactForm.reset({
           phone: data.phone,
@@ -656,14 +641,12 @@ const CMSManagement = () => {
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        // PGRST116 is "No rows returned" error code
         throw error;
       }
 
       setInvoiceSettings(data || null);
       setSignatureImagePreview(data?.signature_image_url || null);
       
-      // Initialize invoice settings form with data if it exists
       if (data) {
         invoiceSettingsForm.reset({
           header_text: data.header_text,
@@ -789,7 +772,6 @@ const CMSManagement = () => {
           </TabsList>
           
           <TabsContent value="pages">
-            {/* Pages Tab Content */}
             <div className="flex justify-end mb-6">
               <Button onClick={() => setIsAddPageDialogOpen(true)} className="bg-sonoff-blue hover:bg-sonoff-teal">
                 <Plus className="mr-2 h-4 w-4" /> Ajouter une page
@@ -888,7 +870,6 @@ const CMSManagement = () => {
           </TabsContent>
           
           <TabsContent value="contact">
-            {/* Contact Tab Content */}
             <div className="bg-white rounded-lg shadow overflow-hidden p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -951,7 +932,6 @@ const CMSManagement = () => {
           </TabsContent>
           
           <TabsContent value="invoice">
-            {/* Invoice Settings Tab Content */}
             <div className="bg-white rounded-lg shadow overflow-hidden p-6">
               <div className="flex justify-between items-start mb-6">
                 <div>
@@ -1018,7 +998,6 @@ const CMSManagement = () => {
           </TabsContent>
           
           <TabsContent value="banners">
-            {/* Banners Tab Content */}
             <div className="flex justify-end mb-6">
               <Button onClick={() => setIsAddBannerDialogOpen(true)} className="bg-sonoff-blue hover:bg-sonoff-teal">
                 <Plus className="mr-2 h-4 w-4" /> Ajouter une bannière
@@ -1120,7 +1099,6 @@ const CMSManagement = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Add Page Dialog */}
         <Dialog open={isAddPageDialogOpen} onOpenChange={setIsAddPageDialogOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -1197,7 +1175,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Page Dialog */}
         <Dialog open={isEditPageDialogOpen} onOpenChange={setIsEditPageDialogOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -1274,7 +1251,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Page Dialog */}
         <Dialog open={isDeletePageDialogOpen} onOpenChange={setIsDeletePageDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -1300,7 +1276,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Contact Dialog */}
         <Dialog open={isEditContactDialogOpen} onOpenChange={setIsEditContactDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -1374,7 +1349,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Invoice Settings Dialog */}
         <Dialog open={isEditInvoiceSettingsDialogOpen} onOpenChange={setIsEditInvoiceSettingsDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -1473,7 +1447,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Add Banner Dialog */}
         <Dialog open={isAddBannerDialogOpen} onOpenChange={setIsAddBannerDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -1601,7 +1574,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Banner Dialog */}
         <Dialog open={isEditBannerDialogOpen} onOpenChange={setIsEditBannerDialogOpen}>
           <DialogContent>
             <DialogHeader>
@@ -1729,7 +1701,6 @@ const CMSManagement = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Delete Banner Dialog */}
         <Dialog open={isDeleteBannerDialogOpen} onOpenChange={setIsDeleteBannerDialogOpen}>
           <DialogContent>
             <DialogHeader>
