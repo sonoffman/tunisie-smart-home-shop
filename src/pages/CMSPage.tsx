@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
@@ -21,6 +21,7 @@ const CMSPage = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCMSPage();
@@ -32,6 +33,42 @@ const CMSPage = () => {
         throw new Error('Slug parameter is missing');
       }
       
+      // Create contact info page if it doesn't exist and this is the first load
+      if (slug === 'contact-info') {
+        const { data: existingPage, error: checkError } = await supabase
+          .from('cms_pages')
+          .select('*')
+          .eq('slug', 'contact-info')
+          .maybeSingle();
+
+        if (checkError) throw checkError;
+
+        if (!existingPage) {
+          const defaultContactInfo = JSON.stringify({
+            phone: "50330000", 
+            email: "contact@sonoff-tunisie.com", 
+            address: "Tunis, Tunisie"
+          });
+
+          const { data: newPage, error: createError } = await supabase
+            .from('cms_pages')
+            .insert({
+              title: "Coordonnées de Contact",
+              slug: "contact-info",
+              content: defaultContactInfo
+            })
+            .select('*')
+            .single();
+
+          if (createError) throw createError;
+          
+          setPage(newPage as CMSPage);
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Normal page fetch
       const { data, error } = await supabase
         .from('cms_pages')
         .select('*')
@@ -49,6 +86,10 @@ const CMSPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBackClick = () => {
+    navigate('/admin/cms');
   };
 
   if (loading) {
@@ -70,12 +111,10 @@ const CMSPage = () => {
             <p className="mt-2 text-red-600">
               Désolé, la page que vous cherchez n'existe pas ou a été déplacée.
             </p>
-            <Link to="/">
-              <Button className="mt-4">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Retour à l'accueil
-              </Button>
-            </Link>
+            <Button className="mt-4" onClick={handleBackClick}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Retour
+            </Button>
           </div>
         </div>
       </Layout>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ShoppingCart, Menu } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,42 @@ import { Badge } from '@/components/ui/badge';
 import MobileMenu from './MobileMenu';
 import { UserMenu } from './UserMenu';
 import { useCart } from '@/contexts/CartContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [phone, setPhone] = useState('50330000');
   const { totalItems } = useCart();
+
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('cms_pages')
+          .select('content')
+          .eq('slug', 'contact-info')
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        if (data?.content) {
+          try {
+            const parsedInfo = JSON.parse(data.content);
+            if (parsedInfo.phone) {
+              setPhone(parsedInfo.phone);
+            }
+          } catch (parseError) {
+            console.error("Error parsing contact info JSON:", parseError);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching contact info:", error);
+      }
+    };
+
+    fetchContactInfo();
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +94,9 @@ const Header = () => {
 
           {/* Contact */}
           <div className="hidden md:flex items-center">
-            <span className="font-semibold text-sonoff-blue">50330000</span>
+            <a href={`tel:${phone}`} className="font-semibold text-sonoff-blue hover:text-sonoff-orange transition-colors">
+              {phone}
+            </a>
           </div>
 
           {/* User Account & Cart */}

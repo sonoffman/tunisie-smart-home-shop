@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,7 +45,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Pencil, Trash2, Plus, Image, CheckCircle } from 'lucide-react';
+import { Pencil, Trash2, Plus, Image, CheckCircle, Search } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -88,6 +89,8 @@ const ProductManagement = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -143,6 +146,21 @@ const ProductManagement = () => {
     }
   }, [user, isAdmin, navigate, toast]);
 
+  useEffect(() => {
+    // Filter products when search query changes
+    if (!searchQuery.trim()) {
+      setFilteredProducts(products);
+    } else {
+      const query = searchQuery.toLowerCase().trim();
+      const filtered = products.filter(product => 
+        product.name.toLowerCase().includes(query) || 
+        product.description?.toLowerCase().includes(query) ||
+        product.category_name?.toLowerCase().includes(query)
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchQuery, products]);
+
   const fetchProducts = async () => {
     setLoading(true);
     try {
@@ -165,6 +183,7 @@ const ProductManagement = () => {
       }));
 
       setProducts(formattedProducts);
+      setFilteredProducts(formattedProducts);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -194,8 +213,40 @@ const ProductManagement = () => {
     }
   };
 
+  // Function to ensure buckets exist before upload
+  const ensureBucketsExist = async () => {
+    try {
+      // Get list of existing buckets
+      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
+      
+      if (listError) throw listError;
+      
+      // Check if product-images bucket exists
+      const productBucketExists = buckets?.some(bucket => bucket.name === 'product-images');
+      
+      if (!productBucketExists) {
+        console.log("Creating product-images bucket...");
+        const { error } = await supabase.storage.createBucket('product-images', {
+          public: true,
+          fileSizeLimit: 10485760, // 10MB
+        });
+        
+        if (error) throw error;
+        console.log("Bucket 'product-images' created successfully");
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error ensuring buckets exist:", error);
+      throw error;
+    }
+  };
+
   const handleAddProduct = async (formData: ProductFormValues) => {
     try {
+      // Ensure buckets exist before upload
+      await ensureBucketsExist();
+      
       let mainImageUrl = null;
       if (mainImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -268,6 +319,9 @@ const ProductManagement = () => {
     if (!currentProduct) return;
 
     try {
+      // Ensure buckets exist before upload
+      await ensureBucketsExist();
+      
       let mainImageUrl = currentProduct.main_image_url;
       if (mainImageFile) {
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -451,7 +505,7 @@ const ProductManagement = () => {
           </TooltipProvider>
         </div>
 
-        <div className="mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -464,6 +518,17 @@ const ProductManagement = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+          
+          <div className="relative w-full md:w-1/3">
+            <Input
+              type="text"
+              placeholder="Rechercher un produit..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pr-10"
+            />
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          </div>
         </div>
         
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -485,12 +550,14 @@ const ProductManagement = () => {
                 <TableRow>
                   <TableCell colSpan={7} className="text-center">Chargement...</TableCell>
                 </TableRow>
-              ) : products.length === 0 ? (
+              ) : filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">Aucun produit trouvé</TableCell>
+                  <TableCell colSpan={7} className="text-center">
+                    {searchQuery ? 'Aucun produit ne correspond à votre recherche' : 'Aucun produit trouvé'}
+                  </TableCell>
                 </TableRow>
               ) : (
-                products.map((product) => (
+                filteredProducts.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell>
                       {product.main_image_url ? (

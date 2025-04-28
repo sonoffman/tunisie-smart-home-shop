@@ -1,5 +1,4 @@
 
-// Do not modify this file directly. This file is part of the Lovable project template.
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
@@ -12,16 +11,24 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   useEffect(() => {
-    // Vérifier et créer les buckets nécessaires au démarrage de l'application
+    // Create required buckets on application startup
     const checkAndCreateBuckets = async () => {
       try {
         console.log("Checking and creating storage buckets...");
         
-        // Bucket pour les images de produits
+        // Bucket for product images
         try {
-          const { data: productBucketExists, error: productBucketError } = await supabase.storage.getBucket('product-images');
+          const { data: buckets, error: listError } = await supabase.storage.listBuckets();
           
-          if (productBucketError && productBucketError.message && productBucketError.message.includes('not found')) {
+          if (listError) {
+            console.error("Error listing buckets:", listError);
+            return;
+          }
+          
+          // Check if product-images bucket exists
+          const productBucketExists = buckets?.some(bucket => bucket.name === 'product-images');
+          
+          if (!productBucketExists) {
             console.log("Creating product-images bucket...");
             const { data, error } = await supabase.storage.createBucket('product-images', {
               public: true,
@@ -31,20 +38,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             if (error) {
               console.error("Error creating product-images bucket:", error);
             } else {
-              console.log("Bucket 'product-images' créé avec succès");
+              console.log("Bucket 'product-images' created successfully");
+              
+              // Set bucket public
+              const { error: policyError } = await supabase
+                .storage
+                .from('product-images')
+                .createSignedUrl('dummy.txt', 60);
+                
+              if (policyError && !policyError.message.includes("The resource was not found")) {
+                console.error("Error setting bucket policy:", policyError);
+              }
             }
-          } else if (productBucketExists) {
+          } else {
             console.log("Bucket 'product-images' already exists");
           }
-        } catch (error) {
-          console.error("Error with product-images bucket:", error);
-        }
-        
-        // Bucket pour les bannières
-        try {
-          const { data: bannerBucketExists, error: bannerBucketError } = await supabase.storage.getBucket('banners');
           
-          if (bannerBucketError && bannerBucketError.message && bannerBucketError.message.includes('not found')) {
+          // Check if banners bucket exists
+          const bannerBucketExists = buckets?.some(bucket => bucket.name === 'banners');
+          
+          if (!bannerBucketExists) {
             console.log("Creating banners bucket...");
             const { data, error } = await supabase.storage.createBucket('banners', {
               public: true,
@@ -54,16 +67,26 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             if (error) {
               console.error("Error creating banners bucket:", error);
             } else {
-              console.log("Bucket 'banners' créé avec succès");
+              console.log("Bucket 'banners' created successfully");
+              
+              // Set bucket public
+              const { error: policyError } = await supabase
+                .storage
+                .from('banners')
+                .createSignedUrl('dummy.txt', 60);
+                
+              if (policyError && !policyError.message.includes("The resource was not found")) {
+                console.error("Error setting bucket policy:", policyError);
+              }
             }
-          } else if (bannerBucketExists) {
+          } else {
             console.log("Bucket 'banners' already exists");
           }
         } catch (error) {
-          console.error("Error with banners bucket:", error);
+          console.error("Error with storage buckets:", error);
         }
       } catch (error) {
-        console.error("Erreur lors de la vérification des buckets:", error);
+        console.error("Error checking buckets:", error);
       }
     };
     
