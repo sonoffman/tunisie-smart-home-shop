@@ -20,7 +20,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import autoTable from 'jspdf-autotable';
 
-type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
+type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled' | 'in_progress' | 'completed';
 
 interface Order {
   id: string;
@@ -64,12 +64,16 @@ const InvoiceGenerator = () => {
   const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
     header_text: 'Facture',
     footer_text: 'Merci pour votre achat',
-    company_name: 'SONOFF Tunisie',
+    company_name: 'SMART AFRICA TECHNOLOGY',
     company_address: 'Tunis, Tunisie',
     company_phone: '+216 XX XXX XXX',
     company_email: 'contact@sonoff-tunisie.com',
     tax_id: '',
   });
+  
+  // Tax variables
+  const VAT_RATE = 0.19; // 19% TVA
+  const FISCAL_STAMP = 1; // 1 dinar timbre fiscal
   
   useEffect(() => {
     // Rediriger si l'utilisateur n'est pas connecté ou pas admin
@@ -140,7 +144,7 @@ const InvoiceGenerator = () => {
       
       if (error && error.code !== 'PGRST116') throw error;
       
-      if (data && data.content) {
+      if (data?.content) {
         try {
           const settings = JSON.parse(data.content);
           setInvoiceSettings(settings);
@@ -163,6 +167,17 @@ const InvoiceGenerator = () => {
 
   const formatCurrency = (amount: number) => {
     return `${amount.toFixed(2)} TND`;
+  };
+
+  const calculateVAT = (grossAmount: number): number => {
+    // Reverse calculate VAT from gross amount (TTC to HT)
+    const netAmount = grossAmount / (1 + VAT_RATE);
+    return grossAmount - netAmount;
+  };
+  
+  const calculateNetAmount = (grossAmount: number): number => {
+    // Calculate net amount (HT) from gross amount (TTC)
+    return grossAmount / (1 + VAT_RATE);
   };
 
   const generateInvoiceNumber = (orderId: string, date: Date) => {
@@ -206,11 +221,13 @@ const InvoiceGenerator = () => {
       y += 5;
       doc.text(`Date: ${formatDate(order.created_at)}`, margin, y);
       
-      // Informations de l'entreprise
+      // Informations de l'entreprise et du client côte à côte
       y += 15;
+      
+      // Entreprise (colonne de gauche)
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(invoiceSettings.company_name || "SONOFF Tunisie", margin, y);
+      doc.text(invoiceSettings.company_name || "SMART AFRICA TECHNOLOGY", margin, y);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
@@ -226,55 +243,95 @@ const InvoiceGenerator = () => {
         doc.text(`Matricule fiscal: ${invoiceSettings.tax_id}`, margin, y);
       }
       
-      // Informations du client
-      y += 15;
+      // Client (colonne de droite)
+      const rightColumnX = 110; // Position X pour la colonne de droite
+      let rightY = y - 20; // On revient en haut pour commencer la colonne du client
+      
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text("Client:", margin, y);
+      doc.text("Client:", rightColumnX, rightY);
       
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      y += 5;
-      doc.text(`Nom: ${order.customer_name}`, margin, y);
-      y += 5;
-      doc.text(`Téléphone: ${order.customer_phone}`, margin, y);
-      y += 5;
-      doc.text(`Adresse: ${order.customer_address}`, margin, y);
+      rightY += 5;
+      doc.text(`Nom: ${order.customer_name}`, rightColumnX, rightY);
+      rightY += 5;
+      doc.text(`Téléphone: ${order.customer_phone}`, rightColumnX, rightY);
+      rightY += 5;
+      doc.text(`Adresse: ${order.customer_address}`, rightColumnX, rightY);
+      
+      // On prend le y le plus grand entre les deux colonnes
+      y = Math.max(y, rightY) + 10;
       
       // Tableau des articles
-      y += 15;
       const tableColumn = [
         { header: 'Article', dataKey: 'product' },
-        { header: 'Prix unitaire', dataKey: 'price' },
+        { header: 'Prix unitaire HT', dataKey: 'priceHT' },
+        { header: 'Prix unitaire TTC', dataKey: 'priceTTC' },
         { header: 'Quantité', dataKey: 'quantity' },
-        { header: 'Total', dataKey: 'total' }
+        { header: 'Total HT', dataKey: 'totalHT' },
+        { header: 'Total TTC', dataKey: 'totalTTC' }
       ];
       
       const tableRows = orderItems.map(item => {
+        const priceHT = item.price / (1 + VAT_RATE);
+        const totalHT = priceHT * item.quantity;
+        const totalTTC = item.price * item.quantity;
+        
         return {
           product: item.product_name,
-          price: formatCurrency(item.price),
+          priceHT: formatCurrency(priceHT),
+          priceTTC: formatCurrency(item.price),
           quantity: item.quantity,
-          total: formatCurrency(item.price * item.quantity)
+          totalHT: formatCurrency(totalHT),
+          totalTTC: formatCurrency(totalTTC)
         };
       });
       
       // Utiliser autoTable correctement
       autoTable(doc, {
-        head: [tableColumn.map(col => col.header)],
-        body: tableRows.map(row => [row.product, row.price, row.quantity, row.total]),
+        head: [['Article', 'Prix HT', 'Prix TTC', 'Quantité', 'Total HT', 'Total TTC']],
+        body: tableRows.map(row => [
+          row.product, 
+          row.priceHT, 
+          row.priceTTC, 
+          row.quantity, 
+          row.totalHT, 
+          row.totalTTC
+        ]),
         startY: y,
-        styles: { fontSize: 10 },
+        styles: { fontSize: 8 },
         headStyles: { fillColor: [0, 71, 187] }
       });
       
       // Récupérer la position Y finale après le tableau
       const finalY = (doc as any).lastAutoTable.finalY + 10;
       
-      // Total de la commande
+      // Calculs des totaux
+      const totalTTC = order.total_amount;
+      const totalHT = calculateNetAmount(totalTTC);
+      const totalVAT = calculateVAT(totalTTC);
+      const grandTotal = totalTTC + FISCAL_STAMP;
+      
+      // Résumé des totaux
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text('Total HT:', 130, finalY);
+      doc.text(formatCurrency(totalHT), 170, finalY);
+      
+      doc.text('TVA (19%):', 130, finalY + 5);
+      doc.text(formatCurrency(totalVAT), 170, finalY + 5);
+      
+      doc.text('Total TTC:', 130, finalY + 10);
+      doc.text(formatCurrency(totalTTC), 170, finalY + 10);
+      
+      doc.text('Timbre fiscal:', 130, finalY + 15);
+      doc.text(formatCurrency(FISCAL_STAMP), 170, finalY + 15);
+      
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
-      doc.text(`Total: ${formatCurrency(order.total_amount)}`, 150, finalY);
+      doc.text('Total à payer:', 130, finalY + 25);
+      doc.text(formatCurrency(grandTotal), 170, finalY + 25);
       
       // Pied de page / Message de remerciement
       doc.setFont('helvetica', 'normal');

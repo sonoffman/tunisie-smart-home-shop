@@ -32,7 +32,7 @@ const CategoryPage = () => {
         // First, get the category details
         const { data: category, error: categoryError } = await supabase
           .from('categories')
-          .select('name')
+          .select('name, id')
           .eq('slug', categoryId)
           .maybeSingle();
 
@@ -40,35 +40,32 @@ const CategoryPage = () => {
         
         if (category) {
           setCategoryName(category.name);
+          
+          // Then, fetch products for this category
+          const { data: products, error } = await supabase
+            .from('products')
+            .select('*')
+            .eq('category_id', category.id);
+
+          if (error) throw error;
+          
+          if (products && products.length > 0) {
+            const formattedProducts = products.map(product => ({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              imageUrl: product.main_image_url || '/placeholder.svg',
+              category: categoryName,
+              description: product.description,
+              stock: product.stock_quantity
+            }));
+            
+            setProducts(formattedProducts);
+          } else {
+            setProducts([]);
+          }
         } else {
           setCategoryName(categoryNames[categoryId] || 'Produits');
-        }
-
-        // Then, fetch products for this category
-        const { data: products, error } = await supabase
-          .from('products')
-          .select(`
-            *,
-            categories(name)
-          `)
-          .eq('categories.slug', categoryId)
-          .order('name');
-
-        if (error) throw error;
-        
-        if (products && products.length > 0) {
-          const formattedProducts = products.map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.main_image_url || '/placeholder.svg',
-            category: product.categories?.name || 'Non catégorisé',
-            description: product.description,
-            stock: product.stock_quantity
-          }));
-          
-          setProducts(formattedProducts);
-        } else {
           setProducts([]);
         }
       } catch (error: any) {

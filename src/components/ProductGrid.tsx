@@ -16,7 +16,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   isAdmin = false 
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 12; // 4x3 grid (changed from 9 which was 3x3)
+  const productsPerPage = 12; // 4x3 grid
 
   // Get current products
   const indexOfLastProduct = currentPage * productsPerPage;

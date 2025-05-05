@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +17,7 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string | null>(null);
+  const [originalMainImage, setOriginalMainImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const { addToCart } = useCart();
   const { toast } = useToast();
@@ -57,12 +57,13 @@ const ProductDetail = () => {
           description: data.description || '',
           price: data.price,
           stock: data.stock_quantity,
-          imageUrl: data.main_image_url || "https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=500&q=80",
+          imageUrl: data.main_image_url || "/placeholder.svg",
           category: data.categories?.name || ''
         };
         
         setProduct(productData);
         setMainImage(data.main_image_url);
+        setOriginalMainImage(data.main_image_url);
         
         // Convert additional_images from Json to string array
         if (data.additional_images && Array.isArray(data.additional_images)) {
@@ -76,45 +77,17 @@ const ProductDetail = () => {
         } else {
           setAdditionalImages([]);
         }
-      } else {
-        // Produit non trouvé, utiliser les données fictives
-        const dummyProduct = getProductById(productId);
-        setProduct(dummyProduct || null);
-        setMainImage(dummyProduct?.imageUrl || null);
       }
     } catch (error) {
       console.error("Erreur lors du chargement du produit:", error);
-      // Produit non trouvé, utiliser les données fictives
-      const dummyProduct = getProductById(productId);
-      setProduct(dummyProduct || null);
-      setMainImage(dummyProduct?.imageUrl || null);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les détails du produit.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  };
-
-  // Fonction de données fictives pour la rétrocompatibilité
-  const getProductById = (id: string): Product | undefined => {
-    const products: Product[] = [
-      {
-        id: "1",
-        name: "Sonoff MINI R2",
-        price: 35.99,
-        imageUrl: "https://images.unsplash.com/photo-1558346490-a72e53ae2d4f?auto=format&fit=crop&w=500&q=80",
-        category: "wifi",
-        description: "Mini interrupteur intelligent compatible avec Alexa et Google Home. Ce petit appareil vous permet de contrôler vos appareils électriques à distance via l'application eWeLink. Compatible avec la plupart des systèmes de domotique.",
-      },
-      {
-        id: "2",
-        name: "Sonoff TX2 EU",
-        price: 75.50,
-        imageUrl: "https://images.unsplash.com/photo-1585399000684-d2f72660f092?auto=format&fit=crop&w=500&q=80",
-        category: "switch",
-        description: "Interrupteur tactile mural Wi-Fi à 2 canaux avec un design élégant en verre. Contrôle indépendant de 2 circuits, compatible avec Alexa, Google Home et eWeLink.",
-      },
-    ];
-
-    return products.find(product => product.id === id);
   };
 
   if (loading) {
@@ -171,8 +144,20 @@ const ProductDetail = () => {
     setMainImage(imageUrl);
   };
 
-  // Combiner les images pour l'affichage en carousel
-  const allImages = [mainImage, ...additionalImages].filter(img => img !== null) as string[];
+  const resetToMainImage = () => {
+    if (originalMainImage) {
+      setMainImage(originalMainImage);
+    }
+  };
+
+  // Prepare images for display
+  const allImages = [];
+  if (originalMainImage) {
+    allImages.push(originalMainImage);
+  }
+  if (additionalImages && additionalImages.length > 0) {
+    allImages.push(...additionalImages.filter(img => img !== null && img !== originalMainImage));
+  }
 
   return (
     <Layout>
@@ -189,8 +174,8 @@ const ProductDetail = () => {
               />
             </div>
 
-            {/* Images supplémentaires */}
-            {allImages.length > 1 && (
+            {/* Images supplémentaires avec bouton pour réinitialiser */}
+            {allImages.length > 0 && (
               <div className="flex overflow-x-auto space-x-2 py-2">
                 {allImages.map((img, idx) => (
                   <div 
