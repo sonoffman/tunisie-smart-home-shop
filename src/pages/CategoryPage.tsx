@@ -82,7 +82,7 @@ const CategoryPage = () => {
     };
 
     fetchProducts();
-  }, [categoryId]);
+  }, [categoryId, categoryName, toast]);
 
   return (
     <Layout>

@@ -21,7 +21,7 @@ const Navigation = () => {
   return (
     <nav className="bg-gray-100 border-y">
       <div className="container mx-auto px-4">
-        <ul className="hidden lg:flex justify-around">
+        <ul className="flex justify-around">
           {categories.map((category) => (
             <li key={category.id} className="py-3">
               <Link 

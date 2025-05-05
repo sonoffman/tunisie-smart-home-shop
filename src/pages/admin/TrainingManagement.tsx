@@ -29,18 +29,7 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/components/ui/dialog';
-
-interface TrainingRequest {
-  id: string;
-  full_name: string;
-  email: string;
-  phone: string;
-  company: string | null;
-  position: string | null;
-  message: string | null;
-  status: 'new' | 'contacted' | 'confirmed' | 'cancelled';
-  created_at: string;
-}
+import { TrainingRequest } from '@/types/supabase';
 
 const TrainingManagement = () => {
   const [requests, setRequests] = useState<TrainingRequest[]>([]);
@@ -62,7 +51,7 @@ const TrainingManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+      setRequests(data as TrainingRequest[] || []);
     } catch (error: any) {
       console.error('Error fetching training requests:', error);
       toast({
