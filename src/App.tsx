@@ -17,6 +17,7 @@ import CMSPage from "./pages/CMSPage";
 import Profile from "./pages/Profile";
 import CheckoutPage from "./pages/CheckoutPage";
 import CartPage from "./pages/CartPage";
+import TrainingPage from "./pages/TrainingPage";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -30,6 +31,7 @@ import ProductManagement from "./pages/admin/ProductManagement";
 import InvoiceManagement from "./pages/admin/InvoiceManagement"; 
 import InvoiceGenerator from "./pages/admin/InvoiceGenerator";
 import SalesManagement from "./pages/admin/SalesManagement";
+import TrainingManagement from "./pages/admin/TrainingManagement";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +54,7 @@ const App = () => (
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/training" element={<TrainingPage />} />
               
               {/* CMS Pages */}
               <Route path="/:slug" element={<CMSPage />} />
@@ -68,6 +71,7 @@ const App = () => (
               <Route path="/admin/invoices" element={<InvoiceManagement />} />
               <Route path="/admin/invoices/:orderId" element={<InvoiceGenerator />} />
               <Route path="/admin/sales" element={<SalesManagement />} />
+              <Route path="/admin/trainings" element={<TrainingManagement />} />
               
               {/* Catch-all route for 404 */}
               <Route path="*" element={<NotFound />} />
