@@ -16,43 +16,6 @@ const HomePage = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Step 1: Fetch categories to ensure they exist
-        const { data: existingCategories, error: categoriesError } = await supabase
-          .from('categories')
-          .select('id, name, slug');
-        
-        if (categoriesError) throw categoriesError;
-
-        // Create a map of category names to IDs
-        const categoryMap = new Map();
-        if (existingCategories && existingCategories.length > 0) {
-          existingCategories.forEach(cat => {
-            categoryMap.set(cat.name.toLowerCase(), cat.id);
-          });
-        } else {
-          // Insert default categories if none exist
-          const defaultCategories = [
-            { name: 'WiFi', slug: 'wifi', icon: 'wifi' },
-            { name: 'ZigBee', slug: 'zigbee', icon: 'zap' },
-            { name: 'Switches', slug: 'switch', icon: 'toggle-left' },
-            { name: 'Screens', slug: 'screen', icon: 'monitor' },
-            { name: 'Accessories', slug: 'accessories', icon: 'package' }
-          ];
-          
-          for (const category of defaultCategories) {
-            const { data: newCat, error: insertError } = await supabase
-              .from('categories')
-              .insert(category)
-              .select();
-            
-            if (insertError) throw insertError;
-            
-            if (newCat && newCat.length > 0) {
-              categoryMap.set(category.name.toLowerCase(), newCat[0].id);
-            }
-          }
-        }
-
         // Fetch featured products to display
         const { data: products, error } = await supabase
           .from('products')
@@ -62,7 +25,7 @@ const HomePage = () => {
           `)
           .eq('featured', true)
           .order('name')
-          .limit(9);
+          .limit(12);
 
         if (error) throw error;
         
@@ -79,7 +42,7 @@ const HomePage = () => {
           
           setProducts(formattedProducts);
         } else {
-          // If no products from DB, use empty array (no sample products)
+          // If no products from DB, use empty array
           setProducts([]);
         }
       } catch (error: any) {
