@@ -38,14 +38,36 @@ const CategoryPage = () => {
 
         if (categoryError) throw categoryError;
         
+        let categoryIdValue = "";
+        
         if (categoryData) {
           setCategoryName(categoryData.name);
+          categoryIdValue = categoryData.id;
+        } else {
+          // Fallback: Set the category name from our hardcoded map
+          setCategoryName(categoryNames[categoryId] || 'Produits');
           
-          // Then, fetch products for this category
+          // Try to find the category by slug in our database
+          const { data: catData, error: catError } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('slug', categoryId)
+            .maybeSingle();
+            
+          if (!catError && catData) {
+            categoryIdValue = catData.id;
+          } else {
+            console.log('Category not found by slug, using categoryId directly');
+            categoryIdValue = categoryId;
+          }
+        }
+        
+        // Fetch products based on the category ID
+        if (categoryIdValue) {
           const { data: productsData, error: productsError } = await supabase
             .from('products')
             .select('*')
-            .eq('category_id', categoryData.id);
+            .eq('category_id', categoryIdValue);
 
           if (productsError) throw productsError;
           
@@ -55,7 +77,7 @@ const CategoryPage = () => {
               name: product.name,
               price: product.price,
               imageUrl: product.main_image_url || '/placeholder.svg',
-              category: categoryData.name,
+              category: categoryName,
               description: product.description || '',
               stock: product.stock_quantity
             }));
@@ -63,46 +85,11 @@ const CategoryPage = () => {
             setProducts(formattedProducts);
           } else {
             setProducts([]);
-            console.log('No products found for category ID:', categoryData.id);
+            console.log('No products found for category ID:', categoryIdValue);
           }
         } else {
-          // Fallback: Try to find category by ID directly
-          const { data: altCategoryData, error: altCategoryError } = await supabase
-            .from('categories')
-            .select('name, id')
-            .eq('id', categoryId)
-            .maybeSingle();
-            
-          if (!altCategoryError && altCategoryData) {
-            setCategoryName(altCategoryData.name);
-            
-            const { data: productsData, error: productsError } = await supabase
-              .from('products')
-              .select('*')
-              .eq('category_id', altCategoryData.id);
-
-            if (!productsError && productsData && productsData.length > 0) {
-              const formattedProducts = productsData.map(product => ({
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                imageUrl: product.main_image_url || '/placeholder.svg',
-                category: altCategoryData.name,
-                description: product.description || '',
-                stock: product.stock_quantity
-              }));
-              
-              setProducts(formattedProducts);
-            } else {
-              setProducts([]);
-              console.log('No products found for alternative category ID lookup:', categoryId);
-            }
-          } else {
-            // Final fallback: use hardcoded category name
-            setCategoryName(categoryNames[categoryId] || 'Produits');
-            setProducts([]);
-            console.log('Category not found in database:', categoryId);
-          }
+          setProducts([]);
+          console.log('Could not determine category ID');
         }
       } catch (error: any) {
         console.error('Error fetching products:', error);

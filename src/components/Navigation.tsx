@@ -19,7 +19,7 @@ const Navigation = () => {
   };
 
   return (
-    <nav className="bg-gray-100 border-y">
+    <nav className="bg-gray-100 border-y w-full">
       <div className="container mx-auto px-4">
         <ul className="flex flex-wrap justify-around">
           {categories.map((category) => (

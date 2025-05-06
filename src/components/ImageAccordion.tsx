@@ -1,6 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
 
 interface BannerItem {
   id: string;
@@ -12,8 +14,52 @@ interface BannerItem {
 
 const ImageAccordion = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [bannerItems, setBannerItems] = useState<BannerItem[]>([]);
+  const { toast } = useToast();
 
-  const bannerItems: BannerItem[] = [
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        // Récupérer les bannières depuis la base de données
+        const { data, error } = await supabase
+          .from('banners')
+          .select('*')
+          .eq('active', true)
+          .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          // Formater les données de la bannière
+          const formattedBanners = data.map(banner => ({
+            id: banner.id,
+            title: banner.title,
+            description: banner.subtitle || '',
+            imageUrl: banner.image_url,
+            link: banner.link || '#'
+          }));
+          setBannerItems(formattedBanners);
+        } else {
+          // Utiliser les bannières par défaut si aucune n'est trouvée
+          setBannerItems(defaultBannerItems);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des bannières:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les bannières",
+          variant: "destructive",
+        });
+        // Utiliser les bannières par défaut en cas d'erreur
+        setBannerItems(defaultBannerItems);
+      }
+    };
+
+    fetchBanners();
+  }, [toast]);
+
+  // Bannières par défaut à utiliser si aucune n'est trouvée dans la base de données
+  const defaultBannerItems: BannerItem[] = [
     {
       id: '1',
       title: 'Modules WiFi Sonoff',

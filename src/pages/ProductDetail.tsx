@@ -20,6 +20,7 @@ const ProductDetail = () => {
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [originalMainImage, setOriginalMainImage] = useState<string | null>(null);
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [allImages, setAllImages] = useState<string[]>([]);
   const { addToCart } = useCart();
   const { toast } = useToast();
   
@@ -75,8 +76,16 @@ const ProductDetail = () => {
             }
           });
           setAdditionalImages(imageArray);
-        } else {
-          setAdditionalImages([]);
+          
+          // Prepare all images for display
+          const allImagesArray = [];
+          if (data.main_image_url) {
+            allImagesArray.push(data.main_image_url);
+          }
+          if (imageArray && imageArray.length > 0) {
+            allImagesArray.push(...imageArray.filter(img => img !== null && img !== data.main_image_url));
+          }
+          setAllImages(allImagesArray);
         }
       }
     } catch (error) {
@@ -151,15 +160,6 @@ const ProductDetail = () => {
     }
   };
 
-  // Prepare images for display
-  const allImages = [];
-  if (originalMainImage) {
-    allImages.push(originalMainImage);
-  }
-  if (additionalImages && additionalImages.length > 0) {
-    allImages.push(...additionalImages.filter(img => img !== null && img !== originalMainImage));
-  }
-
   return (
     <Layout>
       <div className="container mx-auto px-4 py-12">
@@ -197,7 +197,7 @@ const ProductDetail = () => {
                 </div>
                 
                 {/* Bouton pour revenir à l'image principale */}
-                {mainImage !== originalMainImage && (
+                {mainImage !== originalMainImage && originalMainImage && (
                   <Button 
                     variant="outline" 
                     size="sm"

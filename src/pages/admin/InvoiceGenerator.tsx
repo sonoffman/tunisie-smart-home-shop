@@ -1,10 +1,18 @@
-
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import Layout from '@/components/Layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -14,486 +22,461 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Download, Save, Printer } from 'lucide-react';
-import jsPDF from 'jspdf';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
-import autoTable from 'jspdf-autotable';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Loader2, FileText, Trash2, Plus, Minus } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
+import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
 
-type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled' | 'in_progress' | 'completed';
-
-interface Order {
+interface InvoiceItem {
   id: string;
-  created_at: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_address: string;
-  total_amount: number;
-  status: OrderStatus;
-}
-
-interface OrderItem {
-  id: string;
-  order_id: string;
-  product_name: string;
+  description: string;
   quantity: number;
-  price: number;
+  unitPrice: number;
+  total: number;
 }
 
-interface InvoiceSettings {
-  header_text: string;
-  footer_text: string;
-  company_name: string;
-  company_address: string;
-  company_phone: string;
-  company_email: string;
-  tax_id: string;
-  logo_url?: string;
-  signature_url?: string;
+interface Customer {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email?: string;
+}
+
+interface InvoiceTaxes {
+  subtotalHT: number;
+  tva: number;
+  timbreFiscal: number;
+  totalTTC: number;
 }
 
 const InvoiceGenerator = () => {
-  const { orderId } = useParams<{ orderId: string }>();
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [order, setOrder] = useState<Order | null>(null);
-  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
-    header_text: 'Facture',
-    footer_text: 'Merci pour votre achat',
-    company_name: 'SMART AFRICA TECHNOLOGY',
-    company_address: 'Tunis, Tunisie',
-    company_phone: '+216 XX XXX XXX',
-    company_email: 'contact@sonoff-tunisie.com',
-    tax_id: '',
+  const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [items, setItems] = useState<InvoiceItem[]>([
+    { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }
+  ]);
+  const [taxes, setTaxes] = useState<InvoiceTaxes>({
+    subtotalHT: 0,
+    tva: 0,
+    timbreFiscal: 1,
+    totalTTC: 0
   });
-  
-  // Tax variables
-  const VAT_RATE = 0.19; // 19% TVA
-  const FISCAL_STAMP = 1; // 1 dinar timbre fiscal
-  
+
   useEffect(() => {
-    // Rediriger si l'utilisateur n'est pas connecté ou pas admin
     if (user === null || !isAdmin) {
       navigate('/');
       toast({
         title: "Accès refusé",
-        description: user === null 
-          ? "Vous devez être connecté pour accéder à cette page." 
-          : "Vous n'avez pas les droits d'administrateur.",
+        description: "Vous n'avez pas les droits d'administrateur.",
+        variant: "destructive",
+      });
+    } else {
+      fetchCustomers();
+      generateInvoiceNumber();
+    }
+  }, [user, isAdmin, navigate, toast]);
+
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de charger les clients: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateInvoiceNumber = async () => {
+    try {
+      // Get the current year and month
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      
+      // Get the count of invoices for this month to generate a sequential number
+      const { count, error } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact', head: true })
+        .like('invoice_number', `FACT-${year}${month}-%`);
+      
+      if (error) throw error;
+      
+      // Generate the invoice number: FACT-YYYYMM-XXX
+      const sequentialNumber = String((count || 0) + 1).padStart(3, '0');
+      setInvoiceNumber(`FACT-${year}${month}-${sequentialNumber}`);
+    } catch (error: any) {
+      console.error('Error generating invoice number:', error);
+      // Fallback to a timestamp-based invoice number
+      setInvoiceNumber(`FACT-${Date.now()}`);
+    }
+  };
+
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId) || null;
+    setSelectedCustomer(customer);
+  };
+
+  const handleItemChange = (id: string, field: keyof InvoiceItem, value: string | number) => {
+    setItems(prevItems => {
+      return prevItems.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          // Recalculate total if quantity or unitPrice changes
+          if (field === 'quantity' || field === 'unitPrice') {
+            updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+          }
+          return updatedItem;
+        }
+        return item;
+      });
+    });
+  };
+
+  const addItem = () => {
+    setItems([...items, { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
+  };
+
+  const removeItem = (id: string) => {
+    if (items.length > 1) {
+      setItems(items.filter(item => item.id !== id));
+    }
+  };
+
+  const calculateSubtotal = () => {
+    return items.reduce((sum, item) => sum + item.total, 0);
+  };
+
+  const handleTaxCalculation = (calculatedTaxes: InvoiceTaxes) => {
+    setTaxes(calculatedTaxes);
+  };
+
+  const generatePDF = async () => {
+    if (!selectedCustomer) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un client",
         variant: "destructive",
       });
       return;
     }
-    
-    if (orderId) {
-      fetchOrder();
-      fetchInvoiceSettings();
-    } else {
-      navigate('/admin');
-    }
-  }, [user, isAdmin, orderId, navigate, toast]);
 
-  const fetchOrder = async () => {
-    try {
-      setLoading(true);
-      
-      // Récupérer les détails de la commande
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('id', orderId)
-        .single();
-      
-      if (orderError) throw orderError;
-      
-      // Récupérer les articles de la commande
-      const { data: itemsData, error: itemsError } = await supabase
-        .from('order_items')
-        .select('*')
-        .eq('order_id', orderId);
-      
-      if (itemsError) throw itemsError;
-      
-      setOrder(orderData);
-      setOrderItems(itemsData || []);
-      
-    } catch (error: any) {
+    if (items.some(item => !item.description || item.quantity <= 0)) {
       toast({
         title: "Erreur",
-        description: `Impossible de charger la commande: ${error.message}`,
+        description: "Veuillez remplir tous les champs des articles",
         variant: "destructive",
       });
-      navigate('/admin');
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
 
-  const fetchInvoiceSettings = async () => {
+    setLoading(true);
+
     try {
-      // Récupérer les paramètres de facture depuis cms_pages
-      const { data, error } = await supabase
-        .from('cms_pages')
-        .select('content')
-        .eq('slug', 'invoice_settings')
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      if (data?.content) {
-        try {
-          const settings = JSON.parse(data.content);
-          setInvoiceSettings(settings);
-        } catch (parseError) {
-          console.error("Erreur de parsing des paramètres de facture:", parseError);
-        }
-      }
-    } catch (error: any) {
-      console.error("Erreur lors de la récupération des paramètres de facture:", error);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return `${amount.toFixed(2)} TND`;
-  };
-
-  const calculateVAT = (grossAmount: number): number => {
-    // Reverse calculate VAT from gross amount (TTC to HT)
-    const netAmount = grossAmount / (1 + VAT_RATE);
-    return grossAmount - netAmount;
-  };
-  
-  const calculateNetAmount = (grossAmount: number): number => {
-    // Calculate net amount (HT) from gross amount (TTC)
-    return grossAmount / (1 + VAT_RATE);
-  };
-
-  const generateInvoiceNumber = (orderId: string, date: Date) => {
-    // Extraire les 6 premiers caractères de l'ID de commande
-    const shortId = orderId.substring(0, 6).toUpperCase();
-    
-    // Formatter la date au format YYYYMMDD
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    
-    return `INV-${year}${month}${day}-${shortId}`;
-  };
-
-  const generatePDF = async () => {
-    if (!order) return;
-    
-    try {
-      // Créer un nouveau document PDF
+      // Create a new PDF document
       const doc = new jsPDF();
       
-      // Date de la commande
-      const orderDate = new Date(order.created_at);
+      // Add company logo and information
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Smart Africa Technology", 14, 20);
+      doc.text("123 Rue de Tunis", 14, 25);
+      doc.text("Tunis, Tunisie", 14, 30);
+      doc.text("Tel: +216 55 123 456", 14, 35);
+      doc.text("Email: contact@sonoff-store.tn", 14, 40);
       
-      // Générer un numéro de facture
-      const invoiceNumber = generateInvoiceNumber(order.id, orderDate);
-      
-      // Marges
-      const margin = 15;
-      let y = margin;
-      
-      // Entête de la facture
-      doc.setFontSize(20);
+      // Add invoice title and number
+      doc.setFontSize(18);
       doc.setTextColor(0, 0, 0);
-      doc.text(invoiceSettings.header_text || "FACTURE", margin, y);
-      
-      y += 10;
+      doc.text("FACTURE", 105, 20, { align: "center" });
       doc.setFontSize(10);
-      doc.text(`N° ${invoiceNumber}`, margin, y);
+      doc.text(`N° ${invoiceNumber}`, 105, 27, { align: "center" });
+      doc.text(`Date: ${format(new Date(invoiceDate), 'dd MMMM yyyy', { locale: fr })}`, 105, 32, { align: "center" });
       
-      y += 5;
-      doc.text(`Date: ${formatDate(order.created_at)}`, margin, y);
-      
-      // Informations de l'entreprise et du client côte à côte
-      y += 15;
-      
-      // Entreprise (colonne de gauche)
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text(invoiceSettings.company_name || "SMART AFRICA TECHNOLOGY", margin, y);
-      
-      doc.setFont('helvetica', 'normal');
+      // Add customer information
       doc.setFontSize(10);
-      y += 5;
-      doc.text(invoiceSettings.company_address || "", margin, y);
-      y += 5;
-      doc.text(`Tél: ${invoiceSettings.company_phone || ""}`, margin, y);
-      y += 5;
-      doc.text(`Email: ${invoiceSettings.company_email || ""}`, margin, y);
-      
-      if (invoiceSettings.tax_id) {
-        y += 5;
-        doc.text(`Matricule fiscal: ${invoiceSettings.tax_id}`, margin, y);
+      doc.setTextColor(100, 100, 100);
+      doc.text("Facturé à:", 140, 20);
+      doc.setTextColor(0, 0, 0);
+      doc.text(selectedCustomer.name, 140, 25);
+      doc.text(selectedCustomer.address, 140, 30);
+      doc.text(`Tel: ${selectedCustomer.phone}`, 140, 35);
+      if (selectedCustomer.email) {
+        doc.text(`Email: ${selectedCustomer.email}`, 140, 40);
       }
       
-      // Client (colonne de droite)
-      const rightColumnX = 110; // Position X pour la colonne de droite
-      let rightY = y - 20; // On revient en haut pour commencer la colonne du client
+      // Add invoice items table
+      const tableColumn = ["Description", "Quantité", "Prix unitaire (DT)", "Total (DT)"];
+      const tableRows = items.map(item => [
+        item.description,
+        item.quantity.toString(),
+        item.unitPrice.toFixed(3),
+        item.total.toFixed(3)
+      ]);
       
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text("Client:", rightColumnX, rightY);
-      
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      rightY += 5;
-      doc.text(`Nom: ${order.customer_name}`, rightColumnX, rightY);
-      rightY += 5;
-      doc.text(`Téléphone: ${order.customer_phone}`, rightColumnX, rightY);
-      rightY += 5;
-      doc.text(`Adresse: ${order.customer_address}`, rightColumnX, rightY);
-      
-      // On prend le y le plus grand entre les deux colonnes
-      y = Math.max(y, rightY) + 10;
-      
-      // Tableau des articles
-      const tableColumn = [
-        { header: 'Article', dataKey: 'product' },
-        { header: 'Prix unitaire HT', dataKey: 'priceHT' },
-        { header: 'Prix unitaire TTC', dataKey: 'priceTTC' },
-        { header: 'Quantité', dataKey: 'quantity' },
-        { header: 'Total HT', dataKey: 'totalHT' },
-        { header: 'Total TTC', dataKey: 'totalTTC' }
-      ];
-      
-      const tableRows = orderItems.map(item => {
-        const priceHT = item.price / (1 + VAT_RATE);
-        const totalHT = priceHT * item.quantity;
-        const totalTTC = item.price * item.quantity;
-        
-        return {
-          product: item.product_name,
-          priceHT: formatCurrency(priceHT),
-          priceTTC: formatCurrency(item.price),
-          quantity: item.quantity,
-          totalHT: formatCurrency(totalHT),
-          totalTTC: formatCurrency(totalTTC)
-        };
+      // @ts-ignore - jspdf-autotable types are not properly recognized
+      doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 50,
+        theme: 'grid',
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+        foot: [
+          [{ content: 'Sous-total HT:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.subtotalHT.toFixed(3)],
+          [{ content: 'TVA (19%):', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.tva.toFixed(3)],
+          [{ content: 'Timbre fiscal:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.timbreFiscal.toFixed(3)],
+          [{ content: 'Total TTC:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.totalTTC.toFixed(3)]
+        ],
+        footStyles: { fillColor: [240, 240, 240] }
       });
       
-      // Utiliser autoTable correctement
-      autoTable(doc, {
-        head: [['Article', 'Prix HT', 'Prix TTC', 'Quantité', 'Total HT', 'Total TTC']],
-        body: tableRows.map(row => [
-          row.product, 
-          row.priceHT, 
-          row.priceTTC, 
-          row.quantity, 
-          row.totalHT, 
-          row.totalTTC
-        ]),
-        startY: y,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [0, 71, 187] }
-      });
-      
-      // Récupérer la position Y finale après le tableau
+      // Add payment information and terms
       const finalY = (doc as any).lastAutoTable.finalY + 10;
-      
-      // Calculs des totaux
-      const totalTTC = order.total_amount;
-      const totalHT = calculateNetAmount(totalTTC);
-      const totalVAT = calculateVAT(totalTTC);
-      const grandTotal = totalTTC + FISCAL_STAMP;
-      
-      // Résumé des totaux
-      doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.text('Total HT:', 130, finalY);
-      doc.text(formatCurrency(totalHT), 170, finalY);
+      doc.text("Modalités de paiement:", 14, finalY);
+      doc.text("Paiement à la livraison ou par virement bancaire", 14, finalY + 5);
+      doc.text("Merci pour votre confiance!", 105, finalY + 20, { align: "center" });
       
-      doc.text('TVA (19%):', 130, finalY + 5);
-      doc.text(formatCurrency(totalVAT), 170, finalY + 5);
+      // Save the invoice in the database
+      const { error } = await supabase
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          customer_id: selectedCustomer.id,
+          invoice_date: invoiceDate,
+          items: items,
+          subtotal_ht: taxes.subtotalHT,
+          tva: taxes.tva,
+          timbre_fiscal: taxes.timbreFiscal,
+          total_ttc: taxes.totalTTC,
+          created_by: user?.id
+        });
       
-      doc.text('Total TTC:', 130, finalY + 10);
-      doc.text(formatCurrency(totalTTC), 170, finalY + 10);
+      if (error) throw error;
       
-      doc.text('Timbre fiscal:', 130, finalY + 15);
-      doc.text(formatCurrency(FISCAL_STAMP), 170, finalY + 15);
+      // Save the PDF
+      doc.save(`${invoiceNumber}.pdf`);
       
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('Total à payer:', 130, finalY + 25);
-      doc.text(formatCurrency(grandTotal), 170, finalY + 25);
+      toast({
+        title: "Succès",
+        description: "La facture a été générée avec succès",
+      });
       
-      // Pied de page / Message de remerciement
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text(invoiceSettings.footer_text || "Merci pour votre achat", margin, 270);
-      
-      // Enregistrer le PDF
-      doc.save(`facture_${invoiceNumber}.pdf`);
+      // Reset form for a new invoice
+      setItems([{ id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
+      setSelectedCustomer(null);
+      generateInvoiceNumber();
+      setInvoiceDate(format(new Date(), 'yyyy-MM-dd'));
       
     } catch (error: any) {
-      console.error("Erreur lors de la génération du PDF:", error);
       toast({
         title: "Erreur",
         description: `Impossible de générer la facture: ${error.message}`,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <p>Chargement...</p>
-          </div>
-        </div>
-      </Layout>
-    );
+  if (!user || !isAdmin) {
+    return null;
   }
 
-  if (!order) {
-    return (
-      <Layout>
-        <div className="container mx-auto py-8">
-          <div className="text-center">
-            <p>Commande non trouvée</p>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/admin')}
-              className="mt-4"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Retour au dashboard
-            </Button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  const subtotal = calculateSubtotal();
 
   return (
-    <Layout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-sonoff-blue mb-2">Facture</h1>
-            <p className="text-gray-600">
-              Commande passée le {formatDate(order.created_at)} par {order.customer_name}
-            </p>
-          </div>
-          
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => navigate('/admin/sales')}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Retour aux ventes
-            </Button>
-            
-            <Button 
-              className="bg-sonoff-blue hover:bg-sonoff-teal"
-              onClick={generatePDF}
-            >
-              <Download className="mr-2 h-4 w-4" /> Télécharger PDF
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                generatePDF();
-                setTimeout(() => window.print(), 100);
-              }}
-            >
-              <Printer className="mr-2 h-4 w-4" /> Imprimer
-            </Button>
-          </div>
-        </div>
-        
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            {/* Informations de l'entreprise */}
+    <div className="container mx-auto py-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Générateur de factures</CardTitle>
+          <CardDescription>
+            Créez et téléchargez des factures pour vos clients
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Invoice Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="invoice-number">Numéro de facture</Label>
+                <Input
+                  id="invoice-number"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  disabled
+                />
+              </div>
+              <div>
+                <Label htmlFor="invoice-date">Date de facture</Label>
+                <Input
+                  id="invoice-date"
+                  type="date"
+                  value={invoiceDate}
+                  onChange={(e) => setInvoiceDate(e.target.value)}
+                />
+              </div>
+            </div>
             <div>
-              <h2 className="text-xl font-bold mb-4">{invoiceSettings.company_name}</h2>
-              <p className="mb-1">{invoiceSettings.company_address}</p>
-              <p className="mb-1">Tél: {invoiceSettings.company_phone}</p>
-              <p className="mb-1">Email: {invoiceSettings.company_email}</p>
-              {invoiceSettings.tax_id && (
-                <p className="mb-1">Matricule fiscal: {invoiceSettings.tax_id}</p>
+              <Label htmlFor="customer">Client</Label>
+              <Select onValueChange={handleCustomerChange} value={selectedCustomer?.id}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {customers.map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {selectedCustomer && (
+                <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                  <p className="font-medium">{selectedCustomer.name}</p>
+                  <p className="text-sm text-gray-600">{selectedCustomer.address}</p>
+                  <p className="text-sm text-gray-600">{selectedCustomer.phone}</p>
+                  {selectedCustomer.email && (
+                    <p className="text-sm text-gray-600">{selectedCustomer.email}</p>
+                  )}
+                </div>
               )}
             </div>
-            
-            {/* Informations du client */}
-            <div>
-              <h2 className="text-xl font-bold mb-4">Client</h2>
-              <p className="mb-1"><span className="font-medium">Nom:</span> {order.customer_name}</p>
-              <p className="mb-1"><span className="font-medium">Téléphone:</span> {order.customer_phone}</p>
-              <p className="mb-1"><span className="font-medium">Adresse:</span> {order.customer_address}</p>
-              <p className="mb-1"><span className="font-medium">Date:</span> {formatDate(order.created_at)}</p>
-            </div>
           </div>
           
-          <div className="mb-8">
-            <h2 className="text-xl font-bold mb-4">Détails de la commande</h2>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableCaption>
-                  Facture générée le {new Date().toLocaleDateString()}
-                </TableCaption>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produit</TableHead>
-                    <TableHead className="text-right">Prix unitaire</TableHead>
-                    <TableHead className="text-right">Quantité</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {orderItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.product_name}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-right font-bold">
-                      Total
-                    </TableCell>
-                    <TableCell className="text-right font-bold">
-                      {formatCurrency(order.total_amount)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+          {/* Invoice Items */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Articles</h3>
+              <Button variant="outline" size="sm" onClick={addItem}>
+                <Plus className="h-4 w-4 mr-1" /> Ajouter un article
+              </Button>
             </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">Description</TableHead>
+                  <TableHead>Quantité</TableHead>
+                  <TableHead>Prix unitaire (DT)</TableHead>
+                  <TableHead>Total (DT)</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <Input
+                        value={item.description}
+                        onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                        placeholder="Description de l'article"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        step="0.001"
+                        min="0"
+                        value={item.unitPrice}
+                        onChange={(e) => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {item.total.toFixed(3)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        disabled={items.length === 1}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
           
-          <div className="text-center text-gray-500 mt-12">
-            <p>{invoiceSettings.footer_text}</p>
-            
-            {invoiceSettings.signature_url && (
-              <div className="mt-8">
-                <img 
-                  src={invoiceSettings.signature_url} 
-                  alt="Signature" 
-                  className="h-20 mx-auto"
-                />
-                <p className="mt-2">Signature autorisée</p>
+          {/* Tax Calculator (hidden component) */}
+          <InvoiceTaxCalculator subtotal={subtotal} onCalculate={handleTaxCalculation} />
+          
+          {/* Invoice Summary */}
+          <div className="bg-gray-50 p-4 rounded-md">
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span>Sous-total HT:</span>
+                <span>{taxes.subtotalHT.toFixed(3)} DT</span>
               </div>
-            )}
+              <div className="flex justify-between">
+                <span>TVA (19%):</span>
+                <span>{taxes.tva.toFixed(3)} DT</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Timbre fiscal:</span>
+                <span>{taxes.timbreFiscal.toFixed(3)} DT</span>
+              </div>
+              <div className="flex justify-between font-bold">
+                <span>Total TTC:</span>
+                <span>{taxes.totalTTC.toFixed(3)} DT</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </Layout>
+        </CardContent>
+        <CardFooter className="flex justify-end">
+          <Button onClick={generatePDF} disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Génération en cours...
+              </>
+            ) : (
+              <>
+                <FileText className="mr-2 h-4 w-4" />
+                Générer la facture PDF
+              </>
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 };
 
