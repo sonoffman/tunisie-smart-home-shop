@@ -57,7 +57,7 @@ interface Order {
   total_amount: number;
   status: string;
   order_items?: OrderItem[];
-  state: 'en_cours' | 'termine';
+  state: string;
 }
 
 const SalesManagement = () => {
@@ -96,7 +96,13 @@ const SalesManagement = () => {
 
       if (error) throw error;
 
-      setOrders(data as Order[]);
+      // Map the data to include the state field with a default value if it's not present
+      const formattedData = data.map(order => ({
+        ...order,
+        state: order.state || 'en_cours'
+      })) as Order[];
+
+      setOrders(formattedData);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -241,7 +247,7 @@ const SalesManagement = () => {
     }
   };
 
-  const updateOrderState = async (orderId: string, state: 'en_cours' | 'termine') => {
+  const updateOrderState = async (orderId: string, state: string) => {
     try {
       const { error } = await supabase
         .from('orders')
@@ -336,7 +342,7 @@ const SalesManagement = () => {
                     <TableCell>
                       <Select
                         defaultValue={order.state || 'en_cours'}
-                        onValueChange={(value) => updateOrderState(order.id, value as 'en_cours' | 'termine')}
+                        onValueChange={(value) => updateOrderState(order.id, value)}
                       >
                         <SelectTrigger className="w-[180px]">
                           <SelectValue>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -34,9 +35,9 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Loader2, FileText, Trash2, Plus, Minus } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
+import { Loader2, FileText, Trash2, Plus } from 'lucide-react';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
+import { Customer } from '@/types/supabase';
 
 interface InvoiceItem {
   id: string;
@@ -44,14 +45,6 @@ interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   total: number;
-}
-
-interface Customer {
-  id: string;
-  name: string;
-  address: string;
-  phone: string;
-  email?: string;
 }
 
 interface InvoiceTaxes {
@@ -71,7 +64,7 @@ const InvoiceGenerator = () => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [items, setItems] = useState<InvoiceItem[]>([
-    { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }
+    { id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, total: 0 }
   ]);
   const [taxes, setTaxes] = useState<InvoiceTaxes>({
     subtotalHT: 0,
@@ -102,7 +95,7 @@ const InvoiceGenerator = () => {
         .order('name');
 
       if (error) throw error;
-      setCustomers(data || []);
+      setCustomers(data as Customer[]);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -119,17 +112,10 @@ const InvoiceGenerator = () => {
       const year = now.getFullYear();
       const month = String(now.getMonth() + 1).padStart(2, '0');
       
-      // Get the count of invoices for this month to generate a sequential number
-      const { count, error } = await supabase
-        .from('invoices')
-        .select('*', { count: 'exact', head: true })
-        .like('invoice_number', `FACT-${year}${month}-%`);
-      
-      if (error) throw error;
-      
       // Generate the invoice number: FACT-YYYYMM-XXX
-      const sequentialNumber = String((count || 0) + 1).padStart(3, '0');
-      setInvoiceNumber(`FACT-${year}${month}-${sequentialNumber}`);
+      // Using a timestamp to ensure uniqueness
+      const timestamp = Date.now().toString().slice(-3);
+      setInvoiceNumber(`FACT-${year}${month}-${timestamp}`);
     } catch (error: any) {
       console.error('Error generating invoice number:', error);
       // Fallback to a timestamp-based invoice number
@@ -159,7 +145,7 @@ const InvoiceGenerator = () => {
   };
 
   const addItem = () => {
-    setItems([...items, { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
+    setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
   };
 
   const removeItem = (id: string) => {
@@ -221,13 +207,13 @@ const InvoiceGenerator = () => {
       // Add customer information
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
-      doc.text("Facturé à:", 140, 20);
+      doc.text("Facturé à:", 50, 50);
       doc.setTextColor(0, 0, 0);
-      doc.text(selectedCustomer.name, 140, 25);
-      doc.text(selectedCustomer.address, 140, 30);
-      doc.text(`Tel: ${selectedCustomer.phone}`, 140, 35);
+      doc.text(selectedCustomer.name, 50, 55);
+      doc.text(selectedCustomer.address, 50, 60);
+      doc.text(`Tel: ${selectedCustomer.phone}`, 50, 65);
       if (selectedCustomer.email) {
-        doc.text(`Email: ${selectedCustomer.email}`, 140, 40);
+        doc.text(`Email: ${selectedCustomer.email}`, 50, 70);
       }
       
       // Add invoice items table
@@ -243,7 +229,7 @@ const InvoiceGenerator = () => {
       doc.autoTable({
         head: [tableColumn],
         body: tableRows,
-        startY: 50,
+        startY: 80,
         theme: 'grid',
         headStyles: { fillColor: [41, 128, 185], textColor: 255 },
         foot: [
@@ -288,7 +274,7 @@ const InvoiceGenerator = () => {
       });
       
       // Reset form for a new invoice
-      setItems([{ id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
+      setItems([{ id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
       setSelectedCustomer(null);
       generateInvoiceNumber();
       setInvoiceDate(format(new Date(), 'yyyy-MM-dd'));
