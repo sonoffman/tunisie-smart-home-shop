@@ -45,10 +45,8 @@ const TrainingManagement = () => {
   const fetchTrainingRequests = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('training_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Use the get_training_requests function from our migration
+      const { data, error } = await supabase.rpc('get_training_requests');
 
       if (error) throw error;
       setRequests(data as TrainingRequest[]);
@@ -66,10 +64,11 @@ const TrainingManagement = () => {
 
   const updateRequestStatus = async (id: string, status: 'new' | 'contacted' | 'confirmed' | 'cancelled') => {
     try {
-      const { error } = await supabase
-        .from('training_requests')
-        .update({ status })
-        .eq('id', id);
+      // Use the update_training_request_status function from our migration
+      const { error } = await supabase.rpc('update_training_request_status', {
+        p_id: id,
+        p_status: status
+      });
 
       if (error) throw error;
       

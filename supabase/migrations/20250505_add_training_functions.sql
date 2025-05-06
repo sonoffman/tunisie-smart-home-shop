@@ -4,6 +4,22 @@ DROP FUNCTION IF EXISTS public.create_training_request(p_full_name TEXT, p_email
 DROP FUNCTION IF EXISTS public.get_training_requests();
 DROP FUNCTION IF EXISTS public.update_training_request_status(p_id uuid, p_status text);
 
+-- Drop table if it exists
+DROP TABLE IF EXISTS public.training_requests;
+
+-- Create training requests table
+CREATE TABLE IF NOT EXISTS public.training_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  company TEXT,
+  position TEXT,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'new',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Create or replace function to add new training request
 CREATE OR REPLACE FUNCTION public.create_training_request(
   p_full_name TEXT,
@@ -66,3 +82,6 @@ GRANT EXECUTE ON FUNCTION public.create_training_request TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_training_request TO anon;
 GRANT EXECUTE ON FUNCTION public.get_training_requests TO authenticated;
 GRANT EXECUTE ON FUNCTION public.update_training_request_status TO authenticated;
+
+-- Grant access to the training_requests table
+GRANT SELECT ON public.training_requests TO authenticated;
