@@ -36,7 +36,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Loader2, FileText, Trash2, Plus } from 'lucide-react';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
-import { Customer } from '@/types/supabase';
+import { Customer, InvoiceItem } from '@/types/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 interface InvoiceItem {
@@ -248,6 +248,15 @@ const InvoiceGenerator = () => {
       doc.text("Paiement à la livraison ou par virement bancaire", 14, finalY + 5);
       doc.text("Merci pour votre confiance!", 105, finalY + 20, { align: "center" });
       
+      // Convert the InvoiceItem array to a plain JavaScript object array for JSON storage
+      const itemsForStorage = items.map(item => ({
+        id: item.id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        total: item.total
+      }));
+      
       // Save the invoice in the database
       const { error } = await supabase
         .from('invoices')
@@ -255,7 +264,7 @@ const InvoiceGenerator = () => {
           invoice_number: invoiceNumber,
           customer_id: selectedCustomer.id,
           invoice_date: invoiceDate,
-          items: items,
+          items: itemsForStorage,
           subtotal_ht: taxes.subtotalHT,
           tva: taxes.tva,
           timbre_fiscal: taxes.timbreFiscal,

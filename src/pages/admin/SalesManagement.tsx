@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -202,18 +203,18 @@ const SalesManagement = () => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status })
+        .update({ status: status as 'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled' })
         .eq('id', orderId);
 
       if (error) throw error;
 
       // Update local state
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status: status as any } : order
+        order.id === orderId ? { ...order, status: status as Order['status'] } : order
       ));
 
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: status as any });
+        setSelectedOrder({ ...selectedOrder, status: status as Order['status'] });
       }
 
       toast({

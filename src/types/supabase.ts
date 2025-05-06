@@ -21,6 +21,14 @@ export interface Customer {
   email?: string;
 }
 
+export interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
 export interface Invoice {
   id: string;
   invoice_number: string;
@@ -44,6 +52,7 @@ export interface Order {
   total_amount: number;
   status: 'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   state: string;
+  order_items?: OrderItem[]; // Make order_items optional for the SalesManagement component
 }
 
 export interface OrderItem {
