@@ -34,3 +34,22 @@ export interface Invoice {
   created_at: string;
   created_by: string;
 }
+
+export interface Order {
+  id: string;
+  created_at: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
+  total_amount: number;
+  status: 'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  state: string;
+}
+
+export interface OrderItem {
+  id: string;
+  product_name: string;
+  quantity: number;
+  price: number;
+  order_id?: string;
+}

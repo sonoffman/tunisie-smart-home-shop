@@ -40,25 +40,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-
-interface OrderItem {
-  id: string;
-  product_name: string;
-  price: number;
-  quantity: number;
-}
-
-interface Order {
-  id: string;
-  created_at: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_address: string;
-  total_amount: number;
-  status: string;
-  order_items?: OrderItem[];
-  state: string;
-}
+import { Order, OrderItem } from '@/types/supabase';
 
 const SalesManagement = () => {
   const { user, isAdmin } = useAuth();
@@ -227,11 +209,11 @@ const SalesManagement = () => {
 
       // Update local state
       setOrders(orders.map(order => 
-        order.id === orderId ? { ...order, status } : order
+        order.id === orderId ? { ...order, status: status as any } : order
       ));
 
       if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status });
+        setSelectedOrder({ ...selectedOrder, status: status as any });
       }
 
       toast({

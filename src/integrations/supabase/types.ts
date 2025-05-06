@@ -183,6 +183,36 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       invoice_settings: {
         Row: {
           created_at: string
@@ -209,6 +239,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          invoice_date: string
+          invoice_number: string
+          items: Json
+          subtotal_ht: number
+          timbre_fiscal: number
+          total_ttc: number
+          tva: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          invoice_date: string
+          invoice_number: string
+          items: Json
+          subtotal_ht: number
+          timbre_fiscal?: number
+          total_ttc: number
+          tva: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          items?: Json
+          subtotal_ht?: number
+          timbre_fiscal?: number
+          total_ttc?: number
+          tva?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
@@ -263,6 +343,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           id: string
+          state: string | null
           status: Database["public"]["Enums"]["order_status"] | null
           total_amount: number
           updated_at: string
@@ -275,6 +356,7 @@ export type Database = {
           customer_name: string
           customer_phone: string
           id?: string
+          state?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           total_amount: number
           updated_at?: string
@@ -287,6 +369,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           id?: string
+          state?: string | null
           status?: Database["public"]["Enums"]["order_status"] | null
           total_amount?: number
           updated_at?: string

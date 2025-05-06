@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +37,7 @@ import { fr } from 'date-fns/locale';
 import { Loader2, FileText, Trash2, Plus } from 'lucide-react';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
 import { Customer } from '@/types/supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 interface InvoiceItem {
   id: string;
@@ -64,7 +64,7 @@ const InvoiceGenerator = () => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [items, setItems] = useState<InvoiceItem[]>([
-    { id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, total: 0 }
+    { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }
   ]);
   const [taxes, setTaxes] = useState<InvoiceTaxes>({
     subtotalHT: 0,
@@ -145,7 +145,7 @@ const InvoiceGenerator = () => {
   };
 
   const addItem = () => {
-    setItems([...items, { id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
+    setItems([...items, { id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
   };
 
   const removeItem = (id: string) => {
@@ -196,14 +196,6 @@ const InvoiceGenerator = () => {
       doc.text("Tel: +216 55 123 456", 14, 35);
       doc.text("Email: contact@sonoff-store.tn", 14, 40);
       
-      // Add invoice title and number
-      doc.setFontSize(18);
-      doc.setTextColor(0, 0, 0);
-      doc.text("FACTURE", 105, 20, { align: "center" });
-      doc.setFontSize(10);
-      doc.text(`N° ${invoiceNumber}`, 105, 27, { align: "center" });
-      doc.text(`Date: ${format(new Date(invoiceDate), 'dd MMMM yyyy', { locale: fr })}`, 105, 32, { align: "center" });
-      
       // Add customer information
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
@@ -215,6 +207,14 @@ const InvoiceGenerator = () => {
       if (selectedCustomer.email) {
         doc.text(`Email: ${selectedCustomer.email}`, 50, 70);
       }
+      
+      // Add invoice title and number
+      doc.setFontSize(18);
+      doc.setTextColor(0, 0, 0);
+      doc.text("FACTURE", 105, 20, { align: "center" });
+      doc.setFontSize(10);
+      doc.text(`N° ${invoiceNumber}`, 105, 27, { align: "center" });
+      doc.text(`Date: ${format(new Date(invoiceDate), 'dd MMMM yyyy', { locale: fr })}`, 105, 32, { align: "center" });
       
       // Add invoice items table
       const tableColumn = ["Description", "Quantité", "Prix unitaire (DT)", "Total (DT)"];
@@ -274,7 +274,7 @@ const InvoiceGenerator = () => {
       });
       
       // Reset form for a new invoice
-      setItems([{ id: crypto.randomUUID(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
+      setItems([{ id: uuidv4(), description: '', quantity: 1, unitPrice: 0, total: 0 }]);
       setSelectedCustomer(null);
       generateInvoiceNumber();
       setInvoiceDate(format(new Date(), 'yyyy-MM-dd'));
