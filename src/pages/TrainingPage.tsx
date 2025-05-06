@@ -50,15 +50,18 @@ const TrainingPage = () => {
     setIsSubmitting(true);
 
     try {
-      // Use the create_training_request function from our migration
-      const { data: result, error } = await supabase.rpc('create_training_request', {
-        p_full_name: data.fullName,
-        p_email: data.email,
-        p_phone: data.phone,
-        p_company: data.company || null,
-        p_position: data.position || null,
-        p_message: data.message || null
-      });
+      // Insert directly into the training_requests table
+      const { error } = await supabase
+        .from('training_requests')
+        .insert({
+          full_name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          company: data.company || null,
+          position: data.position || null,
+          message: data.message || null,
+          status: 'new'
+        });
 
       if (error) throw error;
 
