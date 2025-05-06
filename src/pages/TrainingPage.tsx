@@ -17,7 +17,6 @@ import {
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { TrainingRequest } from '@/types/supabase';
 
 // Form schema
 const formSchema = z.object({
@@ -51,15 +50,18 @@ const TrainingPage = () => {
     setIsSubmitting(true);
 
     try {
-      // Save form data to database using a more type-safe approach
-      const { error } = await supabase.rpc('create_training_request', {
-        p_full_name: data.fullName,
-        p_email: data.email,
-        p_phone: data.phone,
-        p_company: data.company || null,
-        p_position: data.position || null,
-        p_message: data.message || null
-      });
+      // Insérer directement dans la table training_requests
+      const { error } = await supabase
+        .from('training_requests')
+        .insert({
+          full_name: data.fullName,
+          email: data.email,
+          phone: data.phone,
+          company: data.company || null,
+          position: data.position || null,
+          message: data.message || null,
+          status: 'new'
+        });
 
       if (error) throw error;
 

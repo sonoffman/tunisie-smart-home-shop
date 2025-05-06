@@ -20,6 +20,22 @@ const Footer = () => {
   useEffect(() => {
     const fetchContactInfo = async () => {
       try {
+        // Essayer d'abord de récupérer depuis la table contact_info
+        const { data: contactData, error: contactError } = await supabase
+          .from('contact_info')
+          .select('*')
+          .maybeSingle();
+        
+        if (!contactError && contactData) {
+          setContactInfo({
+            phone: contactData.phone || contactInfo.phone,
+            email: contactData.email || contactInfo.email,
+            address: contactData.address || contactInfo.address
+          });
+          return;
+        }
+        
+        // Fallback: récupérer depuis cms_pages
         const { data, error } = await supabase
           .from('cms_pages')
           .select('content')

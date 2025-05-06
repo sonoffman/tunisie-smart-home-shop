@@ -16,7 +16,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   isAdmin = false 
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 12; // 4x3 grid
+  const productsPerPage = 12; // 3x4 grid
 
   // Get current products
   const indexOfLastProduct = currentPage * productsPerPage;
@@ -47,7 +47,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 my-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 my-8">
             {currentProducts.map((product) => (
               <ProductCard key={product.id} product={product} isAdmin={isAdmin} />
             ))}

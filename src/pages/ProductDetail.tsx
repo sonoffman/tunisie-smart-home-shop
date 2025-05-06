@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Plus, Minus, ArrowRight, ChevronLeft, ChevronRight, Phone, Mail } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, ArrowRight, Phone, Mail } from 'lucide-react';
 import { Product } from '@/components/ProductCard';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -176,23 +177,37 @@ const ProductDetail = () => {
 
             {/* Images supplémentaires avec bouton pour réinitialiser */}
             {allImages.length > 0 && (
-              <div className="flex overflow-x-auto space-x-2 py-2">
-                {allImages.map((img, idx) => (
-                  <div 
-                    key={idx}
-                    className={`flex-shrink-0 w-20 h-20 rounded overflow-hidden cursor-pointer border-2 ${
-                      img === mainImage ? 'border-sonoff-blue' : 'border-transparent'
-                    }`}
-                    onClick={() => setActiveImage(img)}
+              <>
+                <div className="flex overflow-x-auto space-x-2 py-2">
+                  {allImages.map((img, idx) => (
+                    <div 
+                      key={idx}
+                      className={`flex-shrink-0 w-20 h-20 rounded overflow-hidden cursor-pointer border-2 ${
+                        img === mainImage ? 'border-sonoff-blue' : 'border-transparent'
+                      }`}
+                      onClick={() => setActiveImage(img)}
+                    >
+                      <img 
+                        src={img} 
+                        alt={`${product?.name} - vue ${idx + 1}`} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Bouton pour revenir à l'image principale */}
+                {mainImage !== originalMainImage && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={resetToMainImage}
+                    className="mt-2"
                   >
-                    <img 
-                      src={img} 
-                      alt={`${product?.name} - vue ${idx + 1}`} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
+                    Revenir à l'image principale
+                  </Button>
+                )}
+              </>
             )}
           </div>
 

@@ -1,5 +1,10 @@
 
--- Create function to add new training request
+-- Drop functions if they exist
+DROP FUNCTION IF EXISTS public.create_training_request(p_full_name TEXT, p_email TEXT, p_phone TEXT, p_company TEXT, p_position TEXT, p_message TEXT);
+DROP FUNCTION IF EXISTS public.get_training_requests();
+DROP FUNCTION IF EXISTS public.update_training_request_status(p_id uuid, p_status text);
+
+-- Create or replace function to add new training request
 CREATE OR REPLACE FUNCTION public.create_training_request(
   p_full_name TEXT,
   p_email TEXT,

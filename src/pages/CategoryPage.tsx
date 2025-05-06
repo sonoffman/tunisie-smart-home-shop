@@ -29,8 +29,8 @@ const CategoryPage = () => {
       
       setLoading(true);
       try {
-        // First, get the category details
-        const { data: category, error: categoryError } = await supabase
+        // First, get the category details by slug
+        const { data: categoryData, error: categoryError } = await supabase
           .from('categories')
           .select('name, id')
           .eq('slug', categoryId)
@@ -38,35 +38,71 @@ const CategoryPage = () => {
 
         if (categoryError) throw categoryError;
         
-        if (category) {
-          setCategoryName(category.name);
+        if (categoryData) {
+          setCategoryName(categoryData.name);
           
           // Then, fetch products for this category
-          const { data: products, error } = await supabase
+          const { data: productsData, error: productsError } = await supabase
             .from('products')
             .select('*')
-            .eq('category_id', category.id);
+            .eq('category_id', categoryData.id);
 
-          if (error) throw error;
+          if (productsError) throw productsError;
           
-          if (products && products.length > 0) {
-            const formattedProducts = products.map(product => ({
+          if (productsData && productsData.length > 0) {
+            const formattedProducts = productsData.map(product => ({
               id: product.id,
               name: product.name,
               price: product.price,
               imageUrl: product.main_image_url || '/placeholder.svg',
-              category: categoryName,
-              description: product.description,
+              category: categoryData.name,
+              description: product.description || '',
               stock: product.stock_quantity
             }));
             
             setProducts(formattedProducts);
           } else {
             setProducts([]);
+            console.log('No products found for category ID:', categoryData.id);
           }
         } else {
-          setCategoryName(categoryNames[categoryId] || 'Produits');
-          setProducts([]);
+          // Fallback: Try to find category by ID directly
+          const { data: altCategoryData, error: altCategoryError } = await supabase
+            .from('categories')
+            .select('name, id')
+            .eq('id', categoryId)
+            .maybeSingle();
+            
+          if (!altCategoryError && altCategoryData) {
+            setCategoryName(altCategoryData.name);
+            
+            const { data: productsData, error: productsError } = await supabase
+              .from('products')
+              .select('*')
+              .eq('category_id', altCategoryData.id);
+
+            if (!productsError && productsData && productsData.length > 0) {
+              const formattedProducts = productsData.map(product => ({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                imageUrl: product.main_image_url || '/placeholder.svg',
+                category: altCategoryData.name,
+                description: product.description || '',
+                stock: product.stock_quantity
+              }));
+              
+              setProducts(formattedProducts);
+            } else {
+              setProducts([]);
+              console.log('No products found for alternative category ID lookup:', categoryId);
+            }
+          } else {
+            // Final fallback: use hardcoded category name
+            setCategoryName(categoryNames[categoryId] || 'Produits');
+            setProducts([]);
+            console.log('Category not found in database:', categoryId);
+          }
         }
       } catch (error: any) {
         console.error('Error fetching products:', error);
@@ -82,7 +118,7 @@ const CategoryPage = () => {
     };
 
     fetchProducts();
-  }, [categoryId, categoryName, toast]);
+  }, [categoryId, toast]);
 
   return (
     <Layout>
