@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import ImageAccordion from '@/components/ImageAccordion';
 import ProductGrid from '@/components/ProductGrid';
+import ContactForm from '@/components/contact/ContactForm';
 import { Product } from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -66,6 +67,16 @@ const HomePage = () => {
       <ImageAccordion />
       <div className="py-12">
         <ProductGrid products={loading ? [] : products} title="Produits Populaires" />
+      </div>
+
+      {/* Contact Form Section */}
+      <div className="py-12 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-8">Contactez-nous</h2>
+            <ContactForm />
+          </div>
+        </div>
       </div>
     </Layout>
   );

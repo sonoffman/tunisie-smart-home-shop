@@ -14,33 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Eye, FileText, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+import { Eye, FileText, Trash2 } from 'lucide-react';
+import OrderStatusSelector from '@/components/sales/OrderStatusSelector';
+import OrderStateSelector from '@/components/sales/OrderStateSelector';
+import OrderDetailDialog from '@/components/sales/OrderDetailDialog';
+import DeleteOrderDialog from '@/components/sales/DeleteOrderDialog';
 import { Order, OrderItem } from '@/types/supabase';
 
 const SalesManagement = () => {
@@ -171,39 +152,11 @@ const SalesManagement = () => {
     return format(new Date(dateString), 'PPP', { locale: fr });
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'new':
-        return <Badge variant="outline" className="bg-blue-100 text-blue-800">Nouvelle</Badge>;
-      case 'processing':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">En traitement</Badge>;
-      case 'shipped':
-        return <Badge variant="outline" className="bg-purple-100 text-purple-800">Expédiée</Badge>;
-      case 'delivered':
-        return <Badge variant="outline" className="bg-green-100 text-green-800">Livrée</Badge>;
-      case 'cancelled':
-        return <Badge variant="outline" className="bg-red-100 text-red-800">Annulée</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const getStateBadge = (state: string) => {
-    switch (state) {
-      case 'en_cours':
-        return <Badge variant="outline" className="bg-orange-100 text-orange-800">En cours</Badge>;
-      case 'termine':
-        return <Badge variant="outline" className="bg-green-100 text-green-800">Terminé</Badge>;
-      default:
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800">Non défini</Badge>;
-    }
-  };
-
   const updateOrderStatus = async (orderId: string, status: string) => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status: status as 'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled' })
+        .update({ status: status as Order['status'] })
         .eq('id', orderId);
 
       if (error) throw error;
@@ -304,39 +257,16 @@ const SalesManagement = () => {
                     <TableCell className="font-medium">{order.customer_name}</TableCell>
                     <TableCell>{order.total_amount.toFixed(3)} DT</TableCell>
                     <TableCell>
-                      <Select
-                        defaultValue={order.status}
-                        onValueChange={(value) => updateOrderStatus(order.id, value)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue>
-                            {getStatusBadge(order.status)}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="new">Nouvelle</SelectItem>
-                          <SelectItem value="processing">En traitement</SelectItem>
-                          <SelectItem value="shipped">Expédiée</SelectItem>
-                          <SelectItem value="delivered">Livrée</SelectItem>
-                          <SelectItem value="cancelled">Annulée</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <OrderStatusSelector 
+                        status={order.status} 
+                        onStatusChange={(status) => updateOrderStatus(order.id, status)} 
+                      />
                     </TableCell>
                     <TableCell>
-                      <Select
-                        defaultValue={order.state || 'en_cours'}
-                        onValueChange={(value) => updateOrderState(order.id, value)}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue>
-                            {getStateBadge(order.state || 'en_cours')}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="en_cours">En cours</SelectItem>
-                          <SelectItem value="termine">Terminé</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <OrderStateSelector
+                        state={order.state || 'en_cours'}
+                        onStateChange={(state) => updateOrderState(order.id, state)}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
@@ -378,111 +308,19 @@ const SalesManagement = () => {
         </div>
 
         {/* View Order Dialog */}
-        <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Détails de la commande</DialogTitle>
-              <DialogDescription>
-                Informations sur la commande et les produits achetés
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedOrder && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium text-sm">Date de commande</h4>
-                  <p>{formatDate(selectedOrder.created_at)}</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-sm">Client</h4>
-                  <p>{selectedOrder.customer_name}</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-sm">Téléphone</h4>
-                  <p>{selectedOrder.customer_phone}</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-sm">Adresse</h4>
-                  <p>{selectedOrder.customer_address}</p>
-                </div>
-                
-                <Accordion type="single" collapsible className="w-full">
-                  <AccordionItem value="items">
-                    <AccordionTrigger>Produits commandés</AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-2">
-                        {selectedOrder.order_items && selectedOrder.order_items.length > 0 ? (
-                          selectedOrder.order_items.map((item) => (
-                            <div key={item.id} className="flex justify-between text-sm">
-                              <span>{item.quantity}x {item.product_name}</span>
-                              <span>{(item.price * item.quantity).toFixed(3)} DT</span>
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-gray-500">Aucun produit trouvé</p>
-                        )}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                </Accordion>
-                
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>{selectedOrder.total_amount.toFixed(3)} DT</span>
-                </div>
-                
-                <div className="flex justify-between pt-4">
-                  <div className="space-x-2">
-                    <Select
-                      value={selectedOrder.status}
-                      onValueChange={(value) => updateOrderStatus(selectedOrder.id, value)}
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue>
-                          {getStatusBadge(selectedOrder.status)}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">Nouvelle</SelectItem>
-                        <SelectItem value="processing">En traitement</SelectItem>
-                        <SelectItem value="shipped">Expédiée</SelectItem>
-                        <SelectItem value="delivered">Livrée</SelectItem>
-                        <SelectItem value="cancelled">Annulée</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <DialogClose asChild>
-                    <Button variant="outline">Fermer</Button>
-                  </DialogClose>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <OrderDetailDialog
+          isOpen={viewDialogOpen}
+          onOpenChange={setViewDialogOpen}
+          order={selectedOrder}
+          onStatusChange={updateOrderStatus}
+        />
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmer la suppression</DialogTitle>
-              <DialogDescription>
-                Êtes-vous sûr de vouloir supprimer cette commande ? Cette action est irréversible.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteOrder}>
-                Supprimer
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <DeleteOrderDialog
+          isOpen={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onDelete={handleDeleteOrder}
+        />
       </div>
     </Layout>
   );

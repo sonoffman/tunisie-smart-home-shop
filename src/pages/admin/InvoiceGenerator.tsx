@@ -1,27 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Card,
   CardContent,
@@ -30,22 +13,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Loader2, FileText, Trash2, Plus } from 'lucide-react';
+import { Loader2, FileText } from 'lucide-react';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
 import { Customer, InvoiceItem } from '@/types/supabase';
 import { v4 as uuidv4 } from 'uuid';
-
-interface InvoiceItem {
-  id: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  total: number;
-}
+import InvoiceHeader from '@/components/invoice/InvoiceHeader';
+import CustomerSelector from '@/components/invoice/CustomerSelector';
+import InvoiceItemList from '@/components/invoice/InvoiceItemList';
+import InvoiceSummary from '@/components/invoice/InvoiceSummary';
+import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
+import { format } from 'date-fns';
 
 interface InvoiceTaxes {
   subtotalHT: number;
@@ -95,7 +72,10 @@ const InvoiceGenerator = () => {
         .order('name');
 
       if (error) throw error;
-      setCustomers(data as Customer[]);
+      
+      if (data) {
+        setCustomers(data as Customer[]);
+      }
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -184,69 +164,14 @@ const InvoiceGenerator = () => {
     setLoading(true);
 
     try {
-      // Create a new PDF document
-      const doc = new jsPDF();
-      
-      // Add company logo and information
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Smart Africa Technology", 14, 20);
-      doc.text("123 Rue de Tunis", 14, 25);
-      doc.text("Tunis, Tunisie", 14, 30);
-      doc.text("Tel: +216 55 123 456", 14, 35);
-      doc.text("Email: contact@sonoff-store.tn", 14, 40);
-      
-      // Add customer information
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Facturé à:", 50, 50);
-      doc.setTextColor(0, 0, 0);
-      doc.text(selectedCustomer.name, 50, 55);
-      doc.text(selectedCustomer.address, 50, 60);
-      doc.text(`Tel: ${selectedCustomer.phone}`, 50, 65);
-      if (selectedCustomer.email) {
-        doc.text(`Email: ${selectedCustomer.email}`, 50, 70);
-      }
-      
-      // Add invoice title and number
-      doc.setFontSize(18);
-      doc.setTextColor(0, 0, 0);
-      doc.text("FACTURE", 105, 20, { align: "center" });
-      doc.setFontSize(10);
-      doc.text(`N° ${invoiceNumber}`, 105, 27, { align: "center" });
-      doc.text(`Date: ${format(new Date(invoiceDate), 'dd MMMM yyyy', { locale: fr })}`, 105, 32, { align: "center" });
-      
-      // Add invoice items table
-      const tableColumn = ["Description", "Quantité", "Prix unitaire (DT)", "Total (DT)"];
-      const tableRows = items.map(item => [
-        item.description,
-        item.quantity.toString(),
-        item.unitPrice.toFixed(3),
-        item.total.toFixed(3)
-      ]);
-      
-      // @ts-ignore - jspdf-autotable types are not properly recognized
-      doc.autoTable({
-        head: [tableColumn],
-        body: tableRows,
-        startY: 80,
-        theme: 'grid',
-        headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-        foot: [
-          [{ content: 'Sous-total HT:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.subtotalHT.toFixed(3)],
-          [{ content: 'TVA (19%):', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.tva.toFixed(3)],
-          [{ content: 'Timbre fiscal:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.timbreFiscal.toFixed(3)],
-          [{ content: 'Total TTC:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } }, taxes.totalTTC.toFixed(3)]
-        ],
-        footStyles: { fillColor: [240, 240, 240] }
+      // Generate the PDF document
+      const doc = generateInvoicePdf({
+        invoiceNumber,
+        invoiceDate,
+        customer: selectedCustomer,
+        items,
+        taxes
       });
-      
-      // Add payment information and terms
-      const finalY = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(10);
-      doc.text("Modalités de paiement:", 14, finalY);
-      doc.text("Paiement à la livraison ou par virement bancaire", 14, finalY + 5);
-      doc.text("Merci pour votre confiance!", 105, finalY + 20, { align: "center" });
       
       // Convert the InvoiceItem array to a plain JavaScript object array for JSON storage
       const itemsForStorage = items.map(item => ({
@@ -317,143 +242,36 @@ const InvoiceGenerator = () => {
         <CardContent className="space-y-6">
           {/* Invoice Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="invoice-number">Numéro de facture</Label>
-                <Input
-                  id="invoice-number"
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  disabled
-                />
-              </div>
-              <div>
-                <Label htmlFor="invoice-date">Date de facture</Label>
-                <Input
-                  id="invoice-date"
-                  type="date"
-                  value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="customer">Client</Label>
-              <Select onValueChange={handleCustomerChange} value={selectedCustomer?.id}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              {selectedCustomer && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-md">
-                  <p className="font-medium">{selectedCustomer.name}</p>
-                  <p className="text-sm text-gray-600">{selectedCustomer.address}</p>
-                  <p className="text-sm text-gray-600">{selectedCustomer.phone}</p>
-                  {selectedCustomer.email && (
-                    <p className="text-sm text-gray-600">{selectedCustomer.email}</p>
-                  )}
-                </div>
-              )}
-            </div>
+            <InvoiceHeader 
+              invoiceNumber={invoiceNumber}
+              invoiceDate={invoiceDate}
+              onDateChange={setInvoiceDate}
+            />
+            <CustomerSelector 
+              customers={customers}
+              selectedCustomer={selectedCustomer}
+              onCustomerChange={handleCustomerChange}
+            />
           </div>
           
           {/* Invoice Items */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium">Articles</h3>
-              <Button variant="outline" size="sm" onClick={addItem}>
-                <Plus className="h-4 w-4 mr-1" /> Ajouter un article
-              </Button>
-            </div>
-            
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Description</TableHead>
-                  <TableHead>Quantité</TableHead>
-                  <TableHead>Prix unitaire (DT)</TableHead>
-                  <TableHead>Total (DT)</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <Input
-                        value={item.description}
-                        onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
-                        placeholder="Description de l'article"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        step="0.001"
-                        min="0"
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {item.total.toFixed(3)}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(item.id)}
-                        disabled={items.length === 1}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <InvoiceItemList
+            items={items}
+            onAddItem={addItem}
+            onRemoveItem={removeItem}
+            onItemChange={handleItemChange}
+          />
           
           {/* Tax Calculator (hidden component) */}
           <InvoiceTaxCalculator subtotal={subtotal} onCalculate={handleTaxCalculation} />
           
           {/* Invoice Summary */}
-          <div className="bg-gray-50 p-4 rounded-md">
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Sous-total HT:</span>
-                <span>{taxes.subtotalHT.toFixed(3)} DT</span>
-              </div>
-              <div className="flex justify-between">
-                <span>TVA (19%):</span>
-                <span>{taxes.tva.toFixed(3)} DT</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Timbre fiscal:</span>
-                <span>{taxes.timbreFiscal.toFixed(3)} DT</span>
-              </div>
-              <div className="flex justify-between font-bold">
-                <span>Total TTC:</span>
-                <span>{taxes.totalTTC.toFixed(3)} DT</span>
-              </div>
-            </div>
-          </div>
+          <InvoiceSummary
+            subtotalHT={taxes.subtotalHT}
+            tva={taxes.tva}
+            timbreFiscal={taxes.timbreFiscal}
+            totalTTC={taxes.totalTTC}
+          />
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button onClick={generatePDF} disabled={loading}>

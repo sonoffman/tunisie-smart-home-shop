@@ -62,3 +62,12 @@ export interface OrderItem {
   price: number;
   order_id?: string;
 }
+
+export interface ContactFormSubmission {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  message?: string;
+  created_at: string;
+}

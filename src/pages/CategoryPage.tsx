@@ -38,7 +38,7 @@ const CategoryPage = () => {
 
         if (categoryError) throw categoryError;
         
-        let categoryIdValue = "";
+        let categoryIdValue: string | null = null;
         
         if (categoryData) {
           setCategoryName(categoryData.name);
@@ -46,38 +46,30 @@ const CategoryPage = () => {
         } else {
           // Fallback: Set the category name from our hardcoded map
           setCategoryName(categoryNames[categoryId] || 'Produits');
-          
-          // Try to find the category by slug in our database
-          const { data: catData, error: catError } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('slug', categoryId)
-            .maybeSingle();
-            
-          if (!catError && catData) {
-            categoryIdValue = catData.id;
-          } else {
-            console.log('Category not found by slug, using categoryId directly');
-            categoryIdValue = categoryId;
-          }
         }
         
-        // Fetch products based on the category ID
-        if (categoryIdValue) {
-          const { data: productsData, error: productsError } = await supabase
-            .from('products')
-            .select('*')
-            .eq('category_id', categoryIdValue);
+        // Fetch products based on the category slug instead of ID
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('*, categories(name)')
+          .eq(categoryIdValue ? 'category_id' : 'categories.slug', categoryIdValue || categoryId);
 
-          if (productsError) throw productsError;
+        if (productsError) {
+          // If the first query fails, try getting products by category slug match
+          const { data: altProductsData, error: altError } = await supabase
+            .from('products')
+            .select('*, categories(name, slug)')
+            .eq('categories.slug', categoryId);
+            
+          if (altError) throw altError;
           
-          if (productsData && productsData.length > 0) {
-            const formattedProducts = productsData.map(product => ({
+          if (altProductsData && altProductsData.length > 0) {
+            const formattedProducts = altProductsData.map(product => ({
               id: product.id,
               name: product.name,
               price: product.price,
               imageUrl: product.main_image_url || '/placeholder.svg',
-              category: categoryName,
+              category: product.categories?.name || categoryName,
               description: product.description || '',
               stock: product.stock_quantity
             }));
@@ -85,11 +77,23 @@ const CategoryPage = () => {
             setProducts(formattedProducts);
           } else {
             setProducts([]);
-            console.log('No products found for category ID:', categoryIdValue);
+            console.log('No products found using alt method');
           }
+        } else if (productsData && productsData.length > 0) {
+          const formattedProducts = productsData.map(product => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.main_image_url || '/placeholder.svg',
+            category: product.categories?.name || categoryName,
+            description: product.description || '',
+            stock: product.stock_quantity
+          }));
+          
+          setProducts(formattedProducts);
         } else {
           setProducts([]);
-          console.log('Could not determine category ID');
+          console.log('No products found for category ID:', categoryIdValue);
         }
       } catch (error: any) {
         console.error('Error fetching products:', error);
