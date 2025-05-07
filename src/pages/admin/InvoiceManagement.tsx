@@ -35,26 +35,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import jsPDF from 'jspdf';
 // @ts-ignore
 import 'jspdf-autotable';
-import { Order } from '@/types/supabase';
-
-type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled' | 'processing' | 'shipped' | 'delivered';
-
-interface Order {
-  id: string;
-  created_at: string;
-  customer_name: string;
-  customer_phone: string;
-  total_amount: number;
-  status: OrderStatus;
-}
-
-interface OrderItem {
-  id: string;
-  product_name: string;
-  quantity: number;
-  price: number;
-  order_id?: string; // Make order_id optional to fix the TypeScript error
-}
+import { Order, OrderItem } from '@/types/supabase';
 
 const InvoiceManagement = () => {
   const { user, isAdmin } = useAuth();
@@ -93,7 +74,7 @@ const InvoiceManagement = () => {
       
       // Ajouter le filtre de statut si différent de 'all'
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter as OrderStatus);
+        query = query.eq('status', statusFilter);
       }
       
       // Exécuter la requête
