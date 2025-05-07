@@ -37,6 +37,8 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Order, OrderItem } from '@/types/supabase';
 
+type OrderStatusFilter = Order['status'] | 'all';
+
 const InvoiceManagement = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -45,7 +47,7 @@ const InvoiceManagement = () => {
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('validated');
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('validated');
   const [isGenerateManualDialogOpen, setIsGenerateManualDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -74,7 +76,8 @@ const InvoiceManagement = () => {
       
       // Ajouter le filtre de statut si différent de 'all'
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        // Now statusFilter is properly typed as a valid order status when it's not 'all'
+        query = query.eq('status', statusFilter as Order['status']);
       }
       
       // Exécuter la requête
