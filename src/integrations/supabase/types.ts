@@ -129,6 +129,33 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_form_submissions: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          message: string | null
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          message?: string | null
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          message?: string | null
+          phone?: string
+        }
+        Relationships: []
+      }
       contact_info: {
         Row: {
           address: string
@@ -573,7 +600,14 @@ export type Database = {
       }
     }
     Enums: {
-      order_status: "new" | "pending" | "validated" | "cancelled"
+      order_status:
+        | "new"
+        | "pending"
+        | "validated"
+        | "cancelled"
+        | "processing"
+        | "shipped"
+        | "delivered"
       user_role: "customer" | "admin"
     }
     CompositeTypes: {
@@ -690,7 +724,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      order_status: ["new", "pending", "validated", "cancelled"],
+      order_status: [
+        "new",
+        "pending",
+        "validated",
+        "cancelled",
+        "processing",
+        "shipped",
+        "delivered",
+      ],
       user_role: ["customer", "admin"],
     },
   },

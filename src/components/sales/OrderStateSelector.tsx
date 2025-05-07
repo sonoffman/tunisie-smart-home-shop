@@ -18,22 +18,22 @@ const OrderStateSelector: React.FC<OrderStateSelectorProps> = ({ state, onStateC
   const getStateBadge = (state: string) => {
     switch (state) {
       case 'en_cours':
-        return <Badge variant="outline" className="bg-orange-100 text-orange-800">En cours</Badge>;
+        return <Badge variant="outline" className="bg-blue-100 text-blue-800">En cours</Badge>;
       case 'termine':
         return <Badge variant="outline" className="bg-green-100 text-green-800">Terminé</Badge>;
       default:
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800">Non défini</Badge>;
+        return <Badge variant="outline">{state}</Badge>;
     }
   };
 
   return (
     <Select
-      defaultValue={state || 'en_cours'}
+      defaultValue={state}
       onValueChange={(value) => onStateChange(value)}
     >
       <SelectTrigger className="w-[180px]">
         <SelectValue>
-          {getStateBadge(state || 'en_cours')}
+          {getStateBadge(state)}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

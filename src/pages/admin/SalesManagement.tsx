@@ -17,11 +17,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Eye, FileText, Trash2 } from 'lucide-react';
 import OrderStatusSelector from '@/components/sales/OrderStatusSelector';
 import OrderStateSelector from '@/components/sales/OrderStateSelector';
 import OrderDetailDialog from '@/components/sales/OrderDetailDialog';
 import DeleteOrderDialog from '@/components/sales/DeleteOrderDialog';
+import OrderActions from '@/components/sales/OrderActions';
 import { Order, OrderItem } from '@/types/supabase';
 
 const SalesManagement = () => {
@@ -91,10 +91,11 @@ const SalesManagement = () => {
       // Find the order and add items to it
       const order = orders.find(o => o.id === orderId);
       if (order) {
-        setSelectedOrder({
+        const orderWithItems = {
           ...order,
           order_items: orderItems as OrderItem[]
-        });
+        };
+        setSelectedOrder(orderWithItems);
         setViewDialogOpen(true);
       }
     } catch (error: any) {
@@ -269,36 +270,15 @@ const SalesManagement = () => {
                       />
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => fetchOrderDetails(order.id)}
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          Voir
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleGenerateInvoice(order.id)}
-                        >
-                          <FileText className="h-4 w-4 mr-1" />
-                          Facture
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="text-red-500"
-                          onClick={() => {
-                            setOrderToDelete(order.id);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-1" />
-                          Supprimer
-                        </Button>
-                      </div>
+                      <OrderActions 
+                        orderId={order.id}
+                        onViewDetails={fetchOrderDetails}
+                        onGenerateInvoice={handleGenerateInvoice}
+                        onDeleteOrder={(id) => {
+                          setOrderToDelete(id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      />
                     </TableCell>
                   </TableRow>
                 ))

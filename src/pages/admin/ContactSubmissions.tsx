@@ -55,8 +55,9 @@ const ContactSubmissions = () => {
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
+      // Use 'as any' to bypass TypeScript's type checking for the table name
       const { data, error } = await supabase
-        .from('contact_form_submissions')
+        .from('contact_form_submissions' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
