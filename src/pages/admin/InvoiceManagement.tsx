@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -177,6 +178,11 @@ const InvoiceManagement = () => {
     return null;
   }
 
+  // Function to handle status filter changes with proper typing
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value as OrderStatusFilter);
+  };
+
   return (
     <Layout>
       <div className="container mx-auto py-8">
@@ -215,7 +221,7 @@ const InvoiceManagement = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="w-[180px]">
                   <SelectValue placeholder="Tous les statuts" />
                 </SelectTrigger>
