@@ -27,6 +27,10 @@ const OrderStatusSelector: React.FC<OrderStatusSelectorProps> = ({ status, onSta
         return <Badge variant="outline" className="bg-green-100 text-green-800">Livrée</Badge>;
       case 'cancelled':
         return <Badge variant="outline" className="bg-red-100 text-red-800">Annulée</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="bg-orange-100 text-orange-800">En attente</Badge>;
+      case 'validated':
+        return <Badge variant="outline" className="bg-emerald-100 text-emerald-800">Validée</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -47,6 +51,8 @@ const OrderStatusSelector: React.FC<OrderStatusSelectorProps> = ({ status, onSta
         <SelectItem value="processing">En traitement</SelectItem>
         <SelectItem value="shipped">Expédiée</SelectItem>
         <SelectItem value="delivered">Livrée</SelectItem>
+        <SelectItem value="pending">En attente</SelectItem>
+        <SelectItem value="validated">Validée</SelectItem>
         <SelectItem value="cancelled">Annulée</SelectItem>
       </SelectContent>
     </Select>

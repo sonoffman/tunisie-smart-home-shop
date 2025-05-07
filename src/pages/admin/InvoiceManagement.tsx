@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -36,8 +35,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import jsPDF from 'jspdf';
 // @ts-ignore
 import 'jspdf-autotable';
+import { Order } from '@/types/supabase';
 
-type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
+type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled' | 'processing' | 'shipped' | 'delivered';
 
 interface Order {
   id: string;
@@ -93,7 +93,6 @@ const InvoiceManagement = () => {
       
       // Ajouter le filtre de statut si différent de 'all'
       if (statusFilter !== 'all') {
-        // Fix type issue by explicitly casting the statusFilter to OrderStatus when it's not 'all'
         query = query.eq('status', statusFilter as OrderStatus);
       }
       
@@ -102,7 +101,8 @@ const InvoiceManagement = () => {
 
       if (error) throw error;
       
-      setOrders(data || []);
+      // Cast the data to Order[] to fix TypeScript error
+      setOrders(data as unknown as Order[]);
       
       // Récupérer tous les éléments de commande pour la recherche par produit
       const { data: items, error: itemsError } = await supabase
@@ -150,6 +150,9 @@ const InvoiceManagement = () => {
       case 'pending': return 'En attente';
       case 'validated': return 'Validé';
       case 'cancelled': return 'Annulé';
+      case 'processing': return 'En cours de traitement';
+      case 'shipped': return 'Expédié';
+      case 'delivered': return 'Livré';
       default: return status;
     }
   };
@@ -160,6 +163,9 @@ const InvoiceManagement = () => {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'validated': return 'bg-green-100 text-green-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'processing': return 'bg-yellow-100 text-yellow-800';
+      case 'shipped': return 'bg-green-100 text-green-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -236,6 +242,9 @@ const InvoiceManagement = () => {
                     <SelectItem value="pending">En attente</SelectItem>
                     <SelectItem value="validated">Validées</SelectItem>
                     <SelectItem value="cancelled">Annulées</SelectItem>
+                    <SelectItem value="processing">En cours de traitement</SelectItem>
+                    <SelectItem value="shipped">Expédiées</SelectItem>
+                    <SelectItem value="delivered">Livrées</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

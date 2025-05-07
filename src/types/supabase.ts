@@ -50,7 +50,7 @@ export interface Order {
   customer_phone: string;
   customer_address: string;
   total_amount: number;
-  status: 'new' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'new' | 'processing' | 'shipped' | 'delivered' | 'pending' | 'validated' | 'cancelled';
   state: string;
   order_items?: OrderItem[]; // Make order_items optional for the SalesManagement component
 }

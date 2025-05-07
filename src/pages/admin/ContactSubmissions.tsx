@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,15 +54,15 @@ const ContactSubmissions = () => {
   const fetchSubmissions = async () => {
     setLoading(true);
     try {
-      // Use 'as any' to bypass TypeScript's type checking for the table name
       const { data, error } = await supabase
-        .from('contact_form_submissions' as any)
+        .from('contact_form_submissions')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      setSubmissions(data as ContactFormSubmission[]);
+      // Cast the data to ContactFormSubmission[] type to fix TypeScript error
+      setSubmissions(data as unknown as ContactFormSubmission[]);
     } catch (error: any) {
       toast({
         title: "Erreur",

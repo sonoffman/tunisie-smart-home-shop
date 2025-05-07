@@ -33,18 +33,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowLeft, Eye, Search, Settings, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Order } from '@/types/supabase';
 
-type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled';
-
-interface Order {
-  id: string;
-  created_at: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_address: string;
-  total_amount: number;
-  status: OrderStatus;
-}
+type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled' | 'processing' | 'shipped' | 'delivered';
 
 interface OrderItem {
   product_name: string;
@@ -93,7 +84,6 @@ const OrderManagement = () => {
       
       // Ajouter le filtre de statut si différent de 'all'
       if (statusFilter !== 'all') {
-        // Fix type issue by explicitly casting the statusFilter to OrderStatus when it's not 'all'
         query = query.eq('status', statusFilter as OrderStatus);
       }
       
@@ -102,7 +92,8 @@ const OrderManagement = () => {
 
       if (error) throw error;
       
-      setOrders(data || []);
+      // Cast the data to Order[] to fix TypeScript error
+      setOrders(data as unknown as Order[]);
     } catch (error: any) {
       toast({
         title: "Erreur",
