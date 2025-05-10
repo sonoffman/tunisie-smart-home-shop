@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { X, Wifi, Radio, ToggleLeft, Monitor, Package, WhatsApp } from 'lucide-react';
+import { X, Wifi, Radio, ToggleLeft, Monitor, Package, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -41,7 +41,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, phoneNumber = 
                 rel="noopener noreferrer"
                 className="flex items-center justify-center bg-green-500 text-white px-4 py-3 rounded-md hover:bg-green-600 transition-all mb-4"
               >
-                <WhatsApp size={20} className="mr-2" />
+                <MessageSquare size={20} className="mr-2" />
                 <span>Contacter via WhatsApp</span>
               </a>
             </li>

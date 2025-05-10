@@ -9,6 +9,7 @@ import {
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { Order } from '@/types/supabase';
 
+// Define the OrderStatusFilter type
 export type OrderStatusFilter = Order['status'] | 'all';
 
 interface InvoiceFiltersProps {
@@ -81,4 +82,3 @@ const InvoiceFilters = ({
 };
 
 export default InvoiceFilters;
-export type { OrderStatusFilter };

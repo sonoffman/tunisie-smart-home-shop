@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, WhatsApp } from 'lucide-react';
+import { Search, ShoppingCart, Menu, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -115,7 +115,7 @@ const Header = () => {
                 rel="noopener noreferrer"
                 className="flex items-center justify-center bg-green-500 text-white px-3 py-2 rounded-md"
               >
-                <WhatsApp size={18} className="mr-1" />
+                <MessageSquare size={18} className="mr-1" />
                 <span className="font-semibold">{phone}</span>
               </a>
             )}
