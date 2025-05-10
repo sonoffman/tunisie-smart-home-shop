@@ -57,8 +57,8 @@ const Header = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  const whatsappNumber = `21650330000`;
-  const whatsappMessage = encodeURIComponent('Bonjour je souhaite avoir plus d'informations');
+  const whatsappNumber = "21650330000";
+  const whatsappMessage = encodeURIComponent("Bonjour je souhaite avoir plus d'informations");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   return (

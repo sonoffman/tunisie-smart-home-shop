@@ -14,8 +14,8 @@ interface MobileMenuProps {
 const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, phoneNumber = '50330000' }) => {
   if (!isOpen) return null;
 
-  const whatsappNumber = `21650330000`;
-  const whatsappMessage = encodeURIComponent('Bonjour je souhaite avoir plus d'informations');
+  const whatsappNumber = "21650330000";
+  const whatsappMessage = encodeURIComponent("Bonjour je souhaite avoir plus d'informations");
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   return (
