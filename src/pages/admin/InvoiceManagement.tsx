@@ -5,40 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ArrowLeft, Download, FileText, Plus, Search } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import jsPDF from 'jspdf';
-// @ts-ignore
-import 'jspdf-autotable';
+import { ArrowLeft } from 'lucide-react';
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import OrdersTable from '@/components/invoice/OrdersTable';
+import InvoiceFilters, { OrderStatusFilter } from '@/components/invoice/InvoiceFilters';
+import CreateInvoiceDialog from '@/components/invoice/CreateInvoiceDialog';
 import { Order, OrderItem } from '@/types/supabase';
-
-type OrderStatusFilter = Order['status'] | 'all';
 
 const InvoiceManagement = () => {
   const { user, isAdmin } = useAuth();
@@ -77,7 +50,6 @@ const InvoiceManagement = () => {
       
       // Ajouter le filtre de statut si différent de 'all'
       if (statusFilter !== 'all') {
-        // Now statusFilter is properly typed as a valid order status when it's not 'all'
         query = query.eq('status', statusFilter as Order['status']);
       }
       
@@ -86,7 +58,6 @@ const InvoiceManagement = () => {
 
       if (error) throw error;
       
-      // Cast the data to Order[] to fix TypeScript error
       setOrders(data as unknown as Order[]);
       
       // Récupérer tous les éléments de commande pour la recherche par produit
@@ -106,15 +77,6 @@ const InvoiceManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateManualInvoice = () => {
-    // Rediriger vers une interface de création manuelle de facture
-    navigate('/admin/invoices/new');
-  };
-
-  const handleRowClick = (orderId: string) => {
-    navigate(`/admin/invoices/${orderId}`);
   };
 
   const formatDate = (dateString: string) => {
@@ -167,7 +129,6 @@ const InvoiceManagement = () => {
     
     // Vérifier les produits dans la commande
     const orderProductItems = orderItems.filter(item => {
-      // Fix: Use optional chaining to safely access order_id
       return item.order_id === order.id && item.product_name.toLowerCase().includes(searchTerm.toLowerCase());
     });
     
@@ -203,160 +164,29 @@ const InvoiceManagement = () => {
           </TooltipProvider>
         </div>
 
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button onClick={() => setIsGenerateManualDialogOpen(true)}>
-                      <Plus className="mr-2 h-4 w-4" /> Créer une facture
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Créer une nouvelle facture</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tous les statuts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="all">Tous les statuts</SelectItem>
-                    <SelectItem value="new">Nouvelles</SelectItem>
-                    <SelectItem value="pending">En attente</SelectItem>
-                    <SelectItem value="validated">Validées</SelectItem>
-                    <SelectItem value="cancelled">Annulées</SelectItem>
-                    <SelectItem value="processing">En cours de traitement</SelectItem>
-                    <SelectItem value="shipped">Expédiées</SelectItem>
-                    <SelectItem value="delivered">Livrées</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="w-full sm:w-auto">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Rechercher par nom, téléphone ou produit"
-                className="pl-9"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+        <InvoiceFilters 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          statusFilter={statusFilter}
+          handleStatusFilterChange={handleStatusFilterChange}
+          setIsGenerateManualDialogOpen={setIsGenerateManualDialogOpen}
+        />
         
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <Table>
-            <TableCaption>Liste des commandes facturables</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Téléphone</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Chargement...</TableCell>
-                </TableRow>
-              ) : filteredOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">Aucune commande trouvée</TableCell>
-                </TableRow>
-              ) : (
-                filteredOrders.map((order) => (
-                  <TableRow 
-                    key={order.id} 
-                    className="cursor-pointer hover:bg-gray-50"
-                    onClick={() => handleRowClick(order.id)}
-                  >
-                    <TableCell>{formatDate(order.created_at)}</TableCell>
-                    <TableCell className="font-medium">{order.customer_name}</TableCell>
-                    <TableCell>{order.customer_phone}</TableCell>
-                    <TableCell>{formatCurrency(order.total_amount)}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
-                        {getStatusLabel(order.status)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/admin/invoices/${order.id}`);
-                              }}
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Générer une facture</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+          <OrdersTable 
+            loading={loading}
+            orders={filteredOrders}
+            formatDate={formatDate}
+            formatCurrency={formatCurrency}
+            getStatusLabel={getStatusLabel}
+            getStatusColor={getStatusColor}
+          />
         </div>
 
-        {/* Dialog pour la création manuelle de facture */}
-        <Dialog open={isGenerateManualDialogOpen} onOpenChange={setIsGenerateManualDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Créer une facture manuellement</DialogTitle>
-              <DialogDescription>
-                Choisissez comment vous souhaitez créer votre facture.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center"
-                onClick={() => {
-                  setIsGenerateManualDialogOpen(false);
-                  navigate('/admin/sales');
-                }}
-              >
-                <Plus className="h-6 w-6 mb-2" />
-                <span>Nouvelle vente manuelle</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="h-24 flex flex-col items-center justify-center"
-                onClick={() => {
-                  setIsGenerateManualDialogOpen(false);
-                  navigate('/admin/orders');
-                }}
-              >
-                <FileText className="h-6 w-6 mb-2" />
-                <span>À partir d'une commande</span>
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <CreateInvoiceDialog 
+          isOpen={isGenerateManualDialogOpen} 
+          onOpenChange={setIsGenerateManualDialogOpen} 
+        />
       </div>
     </Layout>
   );

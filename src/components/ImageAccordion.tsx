@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BannerItem {
   id: string;
@@ -16,6 +17,7 @@ const ImageAccordion = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [bannerItems, setBannerItems] = useState<BannerItem[]>([]);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -96,6 +98,11 @@ const ImageAccordion = () => {
       link: '/category/accessories'
     }
   ];
+
+  // Ne pas afficher la bannière sur mobile
+  if (isMobile) {
+    return null;
+  }
 
   return (
     <div className="container mx-auto px-4">

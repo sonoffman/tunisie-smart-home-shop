@@ -57,7 +57,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/category/:categoryId" element={<CategoryPage />} />
-              <Route path="/product/:productId" element={<ProductDetail />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
@@ -78,8 +78,8 @@ function App() {
               <Route path="/admin/cms" element={<CMSManagement />} />
               <Route path="/admin/serial-numbers" element={<SerialNumberManagement />} />
               <Route path="/admin/training" element={<TrainingManagement />} />
-              <Route path="/admin/invoices" element={<InvoiceGenerator />} />
-              <Route path="/admin/invoice/:orderId" element={<InvoiceManagement />} />
+              <Route path="/admin/invoices" element={<InvoiceManagement />} />
+              <Route path="/admin/invoice/:orderId" element={<InvoiceGenerator />} />
               <Route path="/admin/sales" element={<SalesManagement />} />
               <Route path="/admin/contact-submissions" element={<ContactSubmissions />} />
 
