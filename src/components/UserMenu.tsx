@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
-import AuthModal from './auth/AuthModal';
+import { AuthModal } from './auth/AuthModal';
 import { Link } from 'react-router-dom';
 
 export const UserMenu = () => {
@@ -33,7 +33,6 @@ export const UserMenu = () => {
           variant="ghost"
           size="icon"
           onClick={() => setShowAuthModal(true)}
-          className="text-sonoff-blue hover:text-sonoff-orange"
         >
           <UserCircle size={24} />
         </Button>
@@ -48,7 +47,7 @@ export const UserMenu = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-sonoff-blue hover:text-sonoff-orange">
+        <Button variant="ghost" size="icon">
           <UserCircle size={24} />
         </Button>
       </DropdownMenuTrigger>
