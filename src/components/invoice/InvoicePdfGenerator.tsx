@@ -1,7 +1,7 @@
 
 import { Customer, InvoiceItem } from '@/types/supabase';
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -66,8 +66,8 @@ export const generateInvoicePdf = ({
     item.total.toFixed(3)
   ]);
   
-  // @ts-ignore - jspdf-autotable types are not properly recognized
-  doc.autoTable({
+  // Use autoTable with proper import
+  autoTable(doc, {
     head: [tableColumn],
     body: tableRows,
     startY: 80,

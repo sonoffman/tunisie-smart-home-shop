@@ -10,6 +10,7 @@ import { UserMenu } from './UserMenu';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +18,7 @@ const Header = () => {
   const [phone, setPhone] = useState('50330000');
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchContactInfo = async () => {
@@ -47,10 +49,16 @@ const Header = () => {
     fetchContactInfo();
   }, []);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Searching for:', searchQuery);
-    // Will implement search functionality when connected to Supabase
+    if (!searchQuery.trim()) return;
+
+    try {
+      // Navigate to a search results page with the query
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    } catch (error) {
+      console.error('Error during search:', error);
+    }
   };
 
   const toggleMenu = () => {
@@ -86,13 +94,13 @@ const Header = () => {
               placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10"
+              className="w-full pr-12"
             />
             <Button 
               type="submit" 
               variant="ghost" 
               size="icon" 
-              className="absolute right-0 top-0 h-full"
+              className="absolute right-0 top-0 h-full w-12"
             >
               <Search size={20} />
             </Button>
@@ -113,10 +121,10 @@ const Header = () => {
                 href={whatsappUrl}
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="flex items-center justify-center bg-green-500 text-white px-3 py-2 rounded-md"
+                className="flex items-center justify-center bg-green-500 text-white px-3 py-2 rounded-md text-xs"
               >
-                <MessageSquare size={18} className="mr-1" />
-                <span className="font-semibold">{phone}</span>
+                <MessageSquare size={16} className="mr-1" />
+                <span className="font-semibold text-white">Msg WhatsApp</span>
               </a>
             )}
             <Link to="/cart" className="text-sonoff-blue hover:text-sonoff-orange transition-colors relative">
@@ -138,13 +146,13 @@ const Header = () => {
               placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-10"
+              className="w-full pr-12"
             />
             <Button 
               type="submit" 
               variant="ghost" 
               size="icon" 
-              className="absolute right-0 top-0 h-full"
+              className="absolute right-0 top-0 h-full w-12"
             >
               <Search size={20} />
             </Button>

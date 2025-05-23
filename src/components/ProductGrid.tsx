@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import ProductCard, { Product } from './ProductCard';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ProductGridProps {
   products: Product[];
@@ -16,7 +17,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   isAdmin = false 
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 12; // 3x4 grid
+  const isMobile = useIsMobile();
+  
+  // Mobile: 2 columns, 15 rows = 30 products per page
+  // Desktop: 4 columns, 3 rows = 12 products per page
+  const productsPerPage = isMobile ? 30 : 12;
 
   // Get current products
   const indexOfLastProduct = currentPage * productsPerPage;
@@ -47,7 +52,11 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 my-8">
+          <div className={`grid gap-4 my-8 ${
+            isMobile 
+              ? 'grid-cols-2 gap-3' 
+              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'
+          }`}>
             {currentProducts.map((product) => (
               <ProductCard key={product.id} product={product} isAdmin={isAdmin} />
             ))}

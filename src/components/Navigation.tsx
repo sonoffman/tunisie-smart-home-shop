@@ -1,29 +1,20 @@
 
-import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Wifi, Radio, ToggleLeft, Monitor, Package } from 'lucide-react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-// Define interface for category from database
 interface Category {
   id: string;
   name: string;
   slug: string;
-  icon: string | null;
+  icon?: string;
 }
 
 const Navigation = () => {
-  const location = useLocation();
   const [categories, setCategories] = useState<Category[]>([]);
-  
-  // Default categories as fallback
-  const defaultCategories = [
-    { id: '1', name: 'Module WiFi', slug: 'wifi', icon: 'wifi' },
-    { id: '2', name: 'Module ZigBee', slug: 'zigbee', icon: 'radio' },
-    { id: '3', name: 'Interrupteur', slug: 'switch', icon: 'toggle-left' },
-    { id: '4', name: 'Écran', slug: 'screen', icon: 'monitor' },
-    { id: '5', name: 'Accessoires', slug: 'accessories', icon: 'package' },
-  ];
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -35,62 +26,80 @@ const Navigation = () => {
 
         if (error) throw error;
         
-        if (data && data.length > 0) {
+        if (data) {
           setCategories(data);
-        } else {
-          // Use default categories if none in the database
-          setCategories(defaultCategories);
         }
       } catch (error) {
         console.error('Error fetching categories:', error);
-        // Use default categories as fallback
-        setCategories(defaultCategories);
       }
     };
 
     fetchCategories();
   }, []);
 
-  const isActive = (path: string) => {
-    return location.pathname === path || location.pathname.startsWith(`${path}/`);
-  };
+  if (isMobile) {
+    return null; // Hide categories on mobile as requested
+  }
 
-  // Get the appropriate icon component based on icon name
-  const getIconComponent = (iconName: string | null) => {
-    switch (iconName) {
-      case 'wifi':
-        return <Wifi size={20} />;
-      case 'radio':
-        return <Radio size={20} />;
-      case 'toggle-left':
-        return <ToggleLeft size={20} />;
-      case 'monitor':
-        return <Monitor size={20} />;
-      case 'package':
-        return <Package size={20} />;
-      default:
-        return <Package size={20} />; // Default icon
-    }
+  const formatCategoryName = (name: string) => {
+    // Remove "module" from category names for mobile display
+    return name.replace(/module\s+/gi, '').trim();
   };
 
   return (
-    <nav className="bg-gray-100 border-y w-full z-10">
+    <nav className="bg-gray-100 py-3">
       <div className="container mx-auto px-4">
-        <ul className="flex flex-wrap justify-around">
+        <div className={`flex items-center space-x-6 ${
+          isMobile ? 'overflow-x-auto whitespace-nowrap pb-2' : 'justify-center'
+        }`}>
+          <Link 
+            to="/" 
+            className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
+              isMobile ? 'text-sm px-2 flex-shrink-0' : ''
+            }`}
+          >
+            Accueil
+          </Link>
+          
           {categories.map((category) => (
-            <li key={category.id} className="py-3">
-              <Link 
-                to={`/category/${category.slug}`} 
-                className={`flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-sonoff-blue transition-colors ${
-                  isActive(`/category/${category.slug}`) ? 'font-bold text-sonoff-blue' : ''
-                }`}
-              >
-                <span className="text-sonoff-blue">{getIconComponent(category.icon)}</span>
-                <span>{category.name}</span>
-              </Link>
-            </li>
+            <Link
+              key={category.id}
+              to={`/category/${category.slug}`}
+              className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
+                isMobile ? 'text-sm px-2 flex-shrink-0' : ''
+              }`}
+            >
+              {isMobile ? formatCategoryName(category.name) : category.name}
+            </Link>
           ))}
-        </ul>
+          
+          <Link 
+            to="/training" 
+            className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
+              isMobile ? 'text-sm px-2 flex-shrink-0' : ''
+            }`}
+          >
+            Formation
+          </Link>
+          
+          <Link 
+            to="/blog" 
+            className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
+              isMobile ? 'text-sm px-2 flex-shrink-0' : ''
+            }`}
+          >
+            Blog
+          </Link>
+          
+          <Link 
+            to="/verify-product" 
+            className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
+              isMobile ? 'text-sm px-2 flex-shrink-0' : ''
+            }`}
+          >
+            Vérifier produit
+          </Link>
+        </div>
       </div>
     </nav>
   );
