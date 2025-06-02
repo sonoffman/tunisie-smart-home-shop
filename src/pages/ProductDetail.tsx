@@ -1,20 +1,30 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Plus, Minus, ArrowRight, Phone, Mail } from 'lucide-react';
-import { Product } from '@/types/product';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+// Define the Product interface locally to avoid circular dependencies
+interface ProductData {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  imageUrl: string;
+  category: string;
+  slug: string;
+}
 
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductData | null>(null);
   const [loading, setLoading] = useState(true);
   const [mainImage, setMainImage] = useState<string | null>(null);
   const [originalMainImage, setOriginalMainImage] = useState<string | null>(null);
@@ -57,7 +67,7 @@ const ProductDetail = () => {
       }
       
       if (data) {
-        const productData: Product = {
+        const productData: ProductData = {
           id: data.id,
           name: data.name,
           description: data.description || '',
