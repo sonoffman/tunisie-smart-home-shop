@@ -4,9 +4,19 @@ import Layout from '@/components/Layout';
 import ImageAccordion from '@/components/ImageAccordion';
 import ProductGrid from '@/components/ProductGrid';
 import ContactForm from '@/components/contact/ContactForm';
-import { Product } from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
+  category: string;
+  description?: string;
+  stock?: number;
+  slug?: string;
+}
 
 const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -32,7 +42,7 @@ const HomePage = () => {
         if (error) throw error;
         
         if (products && products.length > 0) {
-          const formattedProducts = products.map(product => ({
+          const formattedProducts: Product[] = products.map(product => ({
             id: product.id,
             name: product.name,
             price: product.price,
@@ -61,7 +71,7 @@ const HomePage = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [toast]);
 
   return (
     <Layout>
