@@ -4,19 +4,9 @@ import Layout from '@/components/Layout';
 import ImageAccordion from '@/components/ImageAccordion';
 import ProductGrid from '@/components/ProductGrid';
 import ContactForm from '@/components/contact/ContactForm';
+import { Product } from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  category: string;
-  description?: string;
-  stock?: number;
-  slug?: string;
-}
 
 const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([]);
