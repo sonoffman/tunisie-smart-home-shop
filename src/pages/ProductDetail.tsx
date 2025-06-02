@@ -57,7 +57,8 @@ const ProductDetail = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Simplified query to avoid complex type inference
+      const query = supabase
         .from('products')
         .select(`
           id,
@@ -72,8 +73,9 @@ const ProductDetail = () => {
           categories(name)
         `)
         .eq('slug', productSlug)
-        .eq('hidden', false)
-        .single() as { data: SupabaseProductResult | null; error: any };
+        .eq('hidden', false);
+
+      const { data, error } = await query.single();
 
       if (error) {
         console.error("Error fetching product:", error);
