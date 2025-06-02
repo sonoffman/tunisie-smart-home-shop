@@ -20,19 +20,6 @@ interface ProductData {
   slug: string;
 }
 
-// Explicitly type the Supabase query result to avoid type inference issues
-interface SupabaseProductResult {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  stock_quantity: number;
-  main_image_url: string | null;
-  additional_images: any[] | null;
-  category_id: string;
-  slug: string;
-}
-
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -56,9 +43,9 @@ const ProductDetail = () => {
     try {
       setLoading(true);
       
-      // Use explicit typing and select only necessary columns to avoid type inference issues
+      // Simplified approach without explicit generic typing to avoid type inference issues
       const { data: productData, error: productError } = await supabase
-        .from<SupabaseProductResult>('products')
+        .from('products')
         .select('id, name, description, price, stock_quantity, main_image_url, additional_images, category_id, slug')
         .eq('slug', productSlug)
         .single();
