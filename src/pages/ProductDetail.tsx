@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Plus, Minus, ArrowRight, Phone, Mail } from 'lucide-react';
-import { Product } from '@/components/ProductCard';
+import { Product } from '@/types/product';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/components/ui/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
