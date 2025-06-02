@@ -57,51 +57,55 @@ const ProductDetail = () => {
     try {
       setLoading(true);
       
-      // Simplified query to avoid complex type inference
-      const query = supabase
+      // Use a more explicit approach to avoid type inference issues
+      const { data: productData, error: productError } = await supabase
         .from('products')
-        .select(`
-          id,
-          name,
-          description,
-          price,
-          stock_quantity,
-          main_image_url,
-          additional_images,
-          category_id,
-          slug,
-          categories(name)
-        `)
+        .select('*')
         .eq('slug', productSlug)
-        .eq('hidden', false);
+        .eq('hidden', false)
+        .single();
 
-      const { data, error } = await query.single();
+      if (productError) {
+        console.error("Error fetching product:", productError);
+        throw productError;
+      }
 
-      if (error) {
-        console.error("Error fetching product:", error);
-        throw error;
+      if (!productData) {
+        throw new Error("Product not found");
+      }
+
+      // Separately fetch category if needed
+      let categoryName = '';
+      if (productData.category_id) {
+        const { data: categoryData } = await supabase
+          .from('categories')
+          .select('name')
+          .eq('id', productData.category_id)
+          .single();
+        
+        categoryName = categoryData?.name || '';
       }
       
-      if (data) {
-        const productData: ProductData = {
-          id: data.id,
-          name: data.name,
-          description: data.description || '',
-          price: data.price,
-          stock: data.stock_quantity,
-          imageUrl: data.main_image_url || "/placeholder.svg",
-          category: data.categories?.name || '',
-          slug: data.slug
+      if (productData) {
+        const product: ProductData = {
+          id: productData.id,
+          name: productData.name,
+          description: productData.description || '',
+          price: productData.price,
+          stock: productData.stock_quantity,
+          imageUrl: productData.main_image_url || "/placeholder.svg",
+          category: categoryName,
+          slug: productData.slug
         };
         
-        setProduct(productData);
-        setMainImage(data.main_image_url);
-        setOriginalMainImage(data.main_image_url);
+        setProduct(product);
+        setMainImage(productData.main_image_url);
+        setOriginalMainImage(productData.main_image_url);
         
         // Convert additional_images from Json to string array
-        if (data.additional_images && Array.isArray(data.additional_images)) {
+        if (productData.additional_images && Array.isArray(productData.additional_images)) {
           const imageArray: string[] = [];
-          data.additional_images.forEach(img => {
+          productData.additional_images.forEach(img => {
             if (typeof img === 'string') {
               imageArray.push(img);
             }
@@ -110,11 +114,11 @@ const ProductDetail = () => {
           
           // Prepare all images for display
           const allImagesArray = [];
-          if (data.main_image_url) {
-            allImagesArray.push(data.main_image_url);
+          if (productData.main_image_url) {
+            allImagesArray.push(productData.main_image_url);
           }
           if (imageArray && imageArray.length > 0) {
-            allImagesArray.push(...imageArray.filter(img => img !== null && img !== data.main_image_url));
+            allImagesArray.push(...imageArray.filter(img => img !== null && img !== productData.main_image_url));
           }
           setAllImages(allImagesArray);
         }
