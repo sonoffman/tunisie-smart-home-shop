@@ -20,6 +20,20 @@ interface ProductData {
   slug: string;
 }
 
+// Explicitly type the Supabase query result to avoid type inference issues
+interface SupabaseProductResult {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  main_image_url: string | null;
+  additional_images: any[] | null;
+  category_id: string;
+  slug: string;
+  categories: { name: string } | null;
+}
+
 const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -59,7 +73,7 @@ const ProductDetail = () => {
         `)
         .eq('slug', productSlug)
         .eq('hidden', false)
-        .single();
+        .single() as { data: SupabaseProductResult | null; error: any };
 
       if (error) {
         console.error("Error fetching product:", error);
