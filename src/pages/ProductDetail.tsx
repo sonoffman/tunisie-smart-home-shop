@@ -31,7 +31,6 @@ interface SupabaseProductResult {
   additional_images: any[] | null;
   category_id: string;
   slug: string;
-  categories: { name: string } | null;
 }
 
 const ProductDetail = () => {
@@ -57,12 +56,11 @@ const ProductDetail = () => {
     try {
       setLoading(true);
       
-      // Use a more explicit approach to avoid type inference issues
+      // Use explicit typing and select only necessary columns to avoid type inference issues
       const { data: productData, error: productError } = await supabase
-        .from('products')
-        .select('*')
+        .from<SupabaseProductResult>('products')
+        .select('id, name, description, price, stock_quantity, main_image_url, additional_images, category_id, slug')
         .eq('slug', productSlug)
-        .eq('hidden', false)
         .single();
 
       if (productError) {
