@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,17 +5,7 @@ import { ShoppingCart } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  category: string;
-  description?: string;
-  stock?: number;
-  slug?: string;
-}
+import { Product } from '@/types/product';
 
 interface ProductCardProps {
   product: Product;
@@ -118,3 +107,4 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
 };
 
 export default ProductCard;
+export type { Product };

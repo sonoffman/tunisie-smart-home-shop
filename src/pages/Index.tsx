@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import ImageAccordion from '@/components/ImageAccordion';
 import ProductGrid from '@/components/ProductGrid';
 import ContactForm from '@/components/contact/ContactForm';
-import { Product } from '@/components/ProductCard';
+import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -25,7 +24,6 @@ const HomePage = () => {
             categories(name)
           `)
           .eq('featured', true)
-          .eq('hidden', false)
           .order('name')
           .limit(20);
 

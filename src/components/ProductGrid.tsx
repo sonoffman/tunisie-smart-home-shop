@@ -1,6 +1,6 @@
-
 import React, { useState } from 'react';
-import ProductCard, { Product } from './ProductCard';
+import ProductCard from './ProductCard';
+import { Product } from '@/types/product';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
