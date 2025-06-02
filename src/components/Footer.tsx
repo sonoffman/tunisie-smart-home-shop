@@ -125,7 +125,14 @@ const Footer = () => {
               </li>
               <li className="flex items-center text-gray-600">
                 <MapPin size={18} className="mr-2 text-sonoff-blue" />
-                <span>{contactInfo.address}</span>
+                <a 
+                  href="https://www.google.com/maps?q=36.734334,10.312741" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-sonoff-blue transition-colors cursor-pointer"
+                >
+                  {contactInfo.address}
+                </a>
               </li>
             </ul>
           </div>

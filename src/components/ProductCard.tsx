@@ -15,6 +15,7 @@ export interface Product {
   category: string;
   description?: string;
   stock?: number;
+  slug?: string;
 }
 
 interface ProductCardProps {
@@ -51,11 +52,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
     ? product.name.substring(0, isMobile ? 30 : 50) + '...' 
     : product.name;
 
+  const productUrl = product.slug ? `/produit/${product.slug}` : `/product/${product.id}`;
+
   return (
     <div className={`product-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow ${
       isMobile ? 'h-auto' : ''
     }`}>
-      <Link to={`/product/${product.id}`} className="block">
+      <Link to={productUrl} className="block">
         <div className={`overflow-hidden ${isMobile ? 'h-32' : 'h-48'}`}>
           <img 
             src={product.imageUrl} 
@@ -66,10 +69,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
       </Link>
 
       <div className={`p-${isMobile ? '2' : '4'}`}>
-        <Link to={`/product/${product.id}`}>
+        <Link to={productUrl}>
           <h3 className={`font-semibold text-gray-800 mb-2 hover:text-sonoff-blue transition-colors ${
             isMobile ? 'text-sm leading-tight h-10' : 'text-lg h-12'
-          } overflow-hidden`}>
+          } overflow-hidden line-clamp-2`} style={{ 
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
             {truncatedName}
           </h3>
         </Link>

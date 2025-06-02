@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, MessageSquare } from 'lucide-react';
+import { Search, ShoppingCart, MessageSquare } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import MobileMenu from './MobileMenu';
 import { UserMenu } from './UserMenu';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [phone, setPhone] = useState('50330000');
   const { totalItems } = useCart();
   const isMobile = useIsMobile();
@@ -54,15 +52,10 @@ const Header = () => {
     if (!searchQuery.trim()) return;
 
     try {
-      // Navigate to a search results page with the query
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
     } catch (error) {
       console.error('Error during search:', error);
     }
-  };
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
   };
 
   const whatsappNumber = "21650330000";
@@ -71,19 +64,10 @@ const Header = () => {
 
   return (
     <header className="bg-white shadow-sm">
-      <div className="container mx-auto px-4">
+      <div className={`mx-auto ${isMobile ? 'px-2' : 'container px-4'}`}>
         <div className="h-20 flex items-center justify-between">
-          {/* Mobile Menu Button */}
-          <button 
-            onClick={toggleMenu} 
-            className="lg:hidden text-sonoff-blue"
-            aria-label="Menu"
-          >
-            <Menu size={24} />
-          </button>
-
           {/* Logo */}
-          <Link to="/" className="text-2xl font-bold text-sonoff-blue">
+          <Link to="/" className={`font-bold text-sonoff-blue ${isMobile ? 'text-lg' : 'text-2xl'}`}>
             SONOFF Tunisie
           </Link>
 
@@ -114,19 +98,8 @@ const Header = () => {
           </div>
 
           {/* User Account & Cart */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
             <UserMenu />
-            {isMobile && (
-              <a 
-                href={whatsappUrl}
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center justify-center bg-green-500 text-white px-3 py-2 rounded-md text-xs"
-              >
-                <MessageSquare size={16} className="mr-1" />
-                <span className="font-semibold text-white">Msg WhatsApp</span>
-              </a>
-            )}
             <Link to="/cart" className="text-sonoff-blue hover:text-sonoff-orange transition-colors relative">
               <ShoppingCart size={24} />
               {totalItems > 0 && (
@@ -135,6 +108,17 @@ const Header = () => {
                 </Badge>
               )}
             </Link>
+            {isMobile && (
+              <a 
+                href={whatsappUrl}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-center bg-green-500 text-white px-2 py-2 rounded-md text-xs"
+              >
+                <MessageSquare size={14} className="mr-1" />
+                <span className="font-semibold text-white">50330000 Whats Msg</span>
+              </a>
+            )}
           </div>
         </div>
 
@@ -146,22 +130,19 @@ const Header = () => {
               placeholder="Rechercher un produit..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pr-12"
+              className="w-full pr-12 h-10"
             />
             <Button 
               type="submit" 
               variant="ghost" 
               size="icon" 
-              className="absolute right-0 top-0 h-full w-12"
+              className="absolute right-0 top-0 h-10 w-10"
             >
-              <Search size={20} />
+              <Search size={18} />
             </Button>
           </form>
         )}
       </div>
-
-      {/* Mobile Menu */}
-      <MobileMenu isOpen={isMenuOpen} onClose={toggleMenu} phoneNumber={phone} />
     </header>
   );
 };

@@ -37,10 +37,6 @@ const Navigation = () => {
     fetchCategories();
   }, []);
 
-  if (isMobile) {
-    return null; // Hide categories on mobile as requested
-  }
-
   const formatCategoryName = (name: string) => {
     // Remove "module" from category names for mobile display
     return name.replace(/module\s+/gi, '').trim();
@@ -48,19 +44,10 @@ const Navigation = () => {
 
   return (
     <nav className="bg-gray-100 py-3">
-      <div className="container mx-auto px-4">
+      <div className={`mx-auto ${isMobile ? 'px-2' : 'container px-4'}`}>
         <div className={`flex items-center space-x-6 ${
           isMobile ? 'overflow-x-auto whitespace-nowrap pb-2' : 'justify-center'
         }`}>
-          <Link 
-            to="/" 
-            className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
-              isMobile ? 'text-sm px-2 flex-shrink-0' : ''
-            }`}
-          >
-            Accueil
-          </Link>
-          
           {categories.map((category) => (
             <Link
               key={category.id}
@@ -75,7 +62,7 @@ const Navigation = () => {
           
           <Link 
             to="/training" 
-            className={`text-gray-700 hover:text-sonoff-blue transition-colors font-medium ${
+            className={`text-sonoff-blue hover:text-sonoff-blue transition-colors font-medium ${
               isMobile ? 'text-sm px-2 flex-shrink-0' : ''
             }`}
           >

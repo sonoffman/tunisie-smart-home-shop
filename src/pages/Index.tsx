@@ -17,7 +17,7 @@ const HomePage = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // Fetch featured products to display
+        // Fetch featured products to display - increased to 20
         const { data: products, error } = await supabase
           .from('products')
           .select(`
@@ -25,8 +25,9 @@ const HomePage = () => {
             categories(name)
           `)
           .eq('featured', true)
+          .eq('hidden', false)
           .order('name')
-          .limit(12);
+          .limit(20);
 
         if (error) throw error;
         
@@ -38,12 +39,12 @@ const HomePage = () => {
             imageUrl: product.main_image_url || '/placeholder.svg',
             category: product.categories?.name || 'Non catégorisé',
             description: product.description,
-            stock: product.stock_quantity
+            stock: product.stock_quantity,
+            slug: product.slug
           }));
           
           setProducts(formattedProducts);
         } else {
-          // If no products from DB, use empty array
           setProducts([]);
         }
       } catch (error: any) {
@@ -53,7 +54,7 @@ const HomePage = () => {
           description: `Impossible de charger les produits: ${error.message}`,
           variant: "destructive",
         });
-        setProducts([]); // Use empty array when error
+        setProducts([]);
       } finally {
         setLoading(false);
       }
