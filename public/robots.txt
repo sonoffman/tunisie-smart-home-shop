@@ -1,14 +1,16 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
 
 User-agent: *
 Allow: /
+Allow: /produit/
+Allow: /categorie/
+Allow: /blog/
+Allow: /formation
+Allow: /verifier-produit
+Allow: /page/
+
+Disallow: /admin/
+Disallow: /panier
+Disallow: /checkout
+Disallow: /profile
+
+Sitemap: https://sonoff-tunisie.com/sitemap.xml
