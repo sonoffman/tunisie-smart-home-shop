@@ -1,14 +1,15 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Plus, Search, Edit, Trash2, Star, StarOff, Eye, EyeOff } from 'lucide-react';
 import {
   Table,
   TableBody,
-  TableCaption,
   TableCell,
   TableHead,
   TableHeader,
@@ -18,171 +19,84 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from '@/components/ui/form';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Pencil, Trash2, Plus, Image, CheckCircle, Search } from 'lucide-react';
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  stock_quantity: number;
+  main_image_url: string | null;
+  featured: boolean;
+  hidden: boolean;
+  category_id: string | null;
+  categories?: {
+    name: string;
+  };
+}
 
 interface Category {
   id: string;
   name: string;
 }
 
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock_quantity: number;
-  description?: string;
-  main_image_url?: string;
-  additional_images?: string[];
-  category_id?: string;
-  category_name?: string;
-  slug: string;
-  featured?: boolean;
-}
-
-const productSchema = z.object({
-  name: z.string().min(3, 'Le nom doit contenir au moins 3 caractères'),
-  slug: z.string().min(3, 'Le slug doit contenir au moins 3 caractères'),
-  price: z.preprocess(
-    (val) => (val === '' ? undefined : Number(val)),
-    z.number().min(0, 'Le prix doit être positif')
-  ),
-  stock_quantity: z.preprocess(
-    (val) => (val === '' ? undefined : Number(val)),
-    z.number().min(0, 'La quantité doit être positive')
-  ),
-  category_id: z.string().optional(),
-  description: z.string().optional(),
-  featured: z.boolean().optional()
-});
-
-type ProductFormValues = z.infer<typeof productSchema>;
-
 const ProductManagement = () => {
   const { user, isAdmin } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
-  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [additionalImageFiles, setAdditionalImageFiles] = useState<File[]>([]);
-  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
-  const [additionalImagePreviews, setAdditionalImagePreviews] = useState<string[]>([]);
-  const mainImageInputRef = useRef<HTMLInputElement>(null);
-  const additionalImagesInputRef = useRef<HTMLInputElement>(null);
-
-  const form = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: '',
-      slug: '',
-      price: 0,
-      stock_quantity: 0,
-      description: '',
-      category_id: undefined,
-      featured: false
-    }
-  });
-
-  const editForm = useForm<ProductFormValues>({
-    resolver: zodResolver(productSchema),
-    defaultValues: {
-      name: '',
-      slug: '',
-      price: 0,
-      stock_quantity: 0,
-      description: '',
-      category_id: undefined,
-      featured: false
-    }
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    slug: '',
+    description: '',
+    price: 0,
+    stock_quantity: 0,
+    main_image_url: '',
+    featured: false,
+    hidden: false,
+    category_id: '',
   });
 
   useEffect(() => {
-    if (user === null || !isAdmin) {
-      navigate('/');
-      toast({
-        title: "Accès refusé",
-        description: user === null 
-          ? "Vous devez être connecté pour accéder à cette page." 
-          : "Vous n'avez pas les droits d'administrateur.",
-        variant: "destructive",
-      });
-    } else {
+    if (user && isAdmin) {
       fetchProducts();
       fetchCategories();
     }
-  }, [user, isAdmin, navigate, toast]);
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredProducts(products);
-    } else {
-      const query = searchQuery.toLowerCase().trim();
-      const filtered = products.filter(product => 
-        product.name.toLowerCase().includes(query) || 
-        product.description?.toLowerCase().includes(query) ||
-        product.category_name?.toLowerCase().includes(query)
-      );
-      setFilteredProducts(filtered);
-    }
-  }, [searchQuery, products]);
+  }, [user, isAdmin]);
 
   const fetchProducts = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const { data, error } = await supabase
         .from('products')
         .select(`
           *,
-          categories(name)
+          categories (name)
         `)
-        .order('name');
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      const formattedProducts = data.map((product) => ({
-        ...product,
-        category_name: product.categories?.name,
-        additional_images: Array.isArray(product.additional_images) 
-          ? product.additional_images.map(img => String(img))
-          : []
-      }));
-
-      setProducts(formattedProducts);
-      setFilteredProducts(formattedProducts);
+      setProducts(data || []);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -198,11 +112,11 @@ const ProductManagement = () => {
     try {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name')
+        .select('*')
         .order('name');
 
       if (error) throw error;
-      setCategories(data);
+      setCategories(data || []);
     } catch (error: any) {
       toast({
         title: "Erreur",
@@ -212,216 +126,136 @@ const ProductManagement = () => {
     }
   };
 
-  const ensureBucketsExist = async () => {
+  const toggleFeatured = async (productId: string, currentFeatured: boolean) => {
     try {
-      const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-      
-      if (listError) throw listError;
-      
-      const productBucketExists = buckets?.some(bucket => bucket.name === 'product-images');
-      
-      if (!productBucketExists) {
-        console.log("Creating product-images bucket...");
-        const { error } = await supabase.storage.createBucket('product-images', {
-          public: true,
-          fileSizeLimit: 10485760, // 10MB
-        });
-        
-        if (error) throw error;
-        console.log("Bucket 'product-images' created successfully");
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Error ensuring buckets exist:", error);
-      throw error;
-    }
-  };
-
-  const handleAddProduct = async (formData: ProductFormValues) => {
-    try {
-      // No need to create buckets here, they're already created via SQL migration
-      
-      let mainImageUrl = null;
-      if (mainImageFile) {
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(`${Date.now()}-${mainImageFile.name}`, mainImageFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-        
-        const { data: urlData } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(uploadData.path);
-          
-        mainImageUrl = urlData.publicUrl;
-      }
-
-      const additionalImagesUrls = [];
-      for (const file of additionalImageFiles) {
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(`${Date.now()}-${file.name}`, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-        
-        const { data: urlData } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(uploadData.path);
-          
-        additionalImagesUrls.push(urlData.publicUrl);
-      }
-
-      // Add auth header to ensure RLS policy is applied correctly
-      const { error } = await supabase.from('products').insert([
-        {
-          name: formData.name,
-          slug: formData.slug,
-          price: formData.price,
-          stock_quantity: formData.stock_quantity,
-          description: formData.description || '',
-          category_id: formData.category_id || null,
-          main_image_url: mainImageUrl,
-          additional_images: additionalImagesUrls,
-          featured: formData.featured || false
-        }
-      ]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Succès",
-        description: "Le produit a été ajouté avec succès",
-      });
-
-      form.reset();
-      setMainImageFile(null);
-      setAdditionalImageFiles([]);
-      setMainImagePreview(null);
-      setAdditionalImagePreviews([]);
-      setIsAddDialogOpen(false);
-      
-      fetchProducts();
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: `Impossible d'ajouter le produit: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEditProduct = async (formData: ProductFormValues) => {
-    if (!currentProduct) return;
-
-    try {
-      // No need to create buckets here, they're already created via SQL migration
-      
-      let mainImageUrl = currentProduct.main_image_url;
-      if (mainImageFile) {
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(`${Date.now()}-${mainImageFile.name}`, mainImageFile, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-        
-        const { data: urlData } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(uploadData.path);
-          
-        mainImageUrl = urlData.publicUrl;
-      }
-
-      let additionalImagesUrls = currentProduct.additional_images || [];
-      
-      if (additionalImageFiles.length > 0) {
-        const newUrls = [];
-        for (const file of additionalImageFiles) {
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('product-images')
-            .upload(`${Date.now()}-${file.name}`, file, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) throw uploadError;
-          
-          const { data: urlData } = supabase.storage
-            .from('product-images')
-            .getPublicUrl(uploadData.path);
-            
-          newUrls.push(urlData.publicUrl);
-        }
-        additionalImagesUrls = [...additionalImagesUrls, ...newUrls].slice(0, 3);
-      }
-
-      // Add auth header to ensure RLS policy is applied correctly
       const { error } = await supabase
         .from('products')
-        .update({
-          name: formData.name,
-          slug: formData.slug,
-          price: formData.price,
-          stock_quantity: formData.stock_quantity,
-          description: formData.description || '',
-          category_id: formData.category_id || null,
-          main_image_url: mainImageUrl,
-          additional_images: additionalImagesUrls,
-          featured: formData.featured || false
-        })
-        .eq('id', currentProduct.id);
+        .update({ featured: !currentFeatured })
+        .eq('id', productId);
 
       if (error) throw error;
 
+      setProducts(products.map(product => 
+        product.id === productId 
+          ? { ...product, featured: !currentFeatured }
+          : product
+      ));
+
       toast({
         title: "Succès",
-        description: "Le produit a été mis à jour avec succès",
+        description: `Produit ${!currentFeatured ? 'mis en avant' : 'retiré de la mise en avant'}`,
       });
-
-      setCurrentProduct(null);
-      setMainImageFile(null);
-      setAdditionalImageFiles([]);
-      setMainImagePreview(null);
-      setAdditionalImagePreviews([]);
-      setIsEditDialogOpen(false);
-      
-      fetchProducts();
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: `Impossible de mettre à jour le produit: ${error.message}`,
+        description: `Impossible de modifier le produit: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
-  const handleDeleteProduct = async () => {
-    if (!currentProduct) return;
+  const toggleHidden = async (productId: string, currentHidden: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ hidden: !currentHidden })
+        .eq('id', productId);
 
+      if (error) throw error;
+
+      setProducts(products.map(product => 
+        product.id === productId 
+          ? { ...product, hidden: !currentHidden }
+          : product
+      ));
+
+      toast({
+        title: "Succès",
+        description: `Produit ${!currentHidden ? 'masqué' : 'affiché'}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de modifier le produit: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(formData)
+          .eq('id', editingProduct.id);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Succès",
+          description: "Produit modifié avec succès",
+        });
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert([formData]);
+
+        if (error) throw error;
+        
+        toast({
+          title: "Succès",
+          description: "Produit créé avec succès",
+        });
+      }
+      
+      setIsDialogOpen(false);
+      setEditingProduct(null);
+      resetForm();
+      fetchProducts();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de sauvegarder le produit: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      slug: product.slug,
+      description: product.description || '',
+      price: product.price,
+      stock_quantity: product.stock_quantity,
+      main_image_url: product.main_image_url || '',
+      featured: product.featured || false,
+      hidden: product.hidden || false,
+      category_id: product.category_id || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (productId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) return;
+    
     try {
       const { error } = await supabase
         .from('products')
         .delete()
-        .eq('id', currentProduct.id);
+        .eq('id', productId);
 
       if (error) throw error;
-
+      
       toast({
         title: "Succès",
-        description: "Le produit a été supprimé avec succès",
+        description: "Produit supprimé avec succès",
       });
-
-      setCurrentProduct(null);
-      setIsDeleteDialogOpen(false);
+      
       fetchProducts();
     } catch (error: any) {
       toast({
@@ -432,65 +266,41 @@ const ProductManagement = () => {
     }
   };
 
-  const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setMainImageFile(file);
-      
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMainImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files).slice(0, 3);
-      setAdditionalImageFiles(files);
-      
-      const previews: string[] = [];
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          previews.push(reader.result as string);
-          if (previews.length === files.length) {
-            setAdditionalImagePreviews(previews);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  };
-
-  const openEditDialog = (product: Product) => {
-    setCurrentProduct(product);
-    editForm.reset({
-      name: product.name,
-      slug: product.slug,
-      price: product.price,
-      stock_quantity: product.stock_quantity,
-      description: product.description || '',
-      category_id: product.category_id || undefined,
-      featured: product.featured || false
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      slug: '',
+      description: '',
+      price: 0,
+      stock_quantity: 0,
+      main_image_url: '',
+      featured: false,
+      hidden: false,
+      category_id: '',
     });
-    setMainImagePreview(product.main_image_url || null);
-    setAdditionalImagePreviews(product.additional_images || []);
-    setIsEditDialogOpen(true);
   };
 
-  const openDeleteDialog = (product: Product) => {
-    setCurrentProduct(product);
-    setIsDeleteDialogOpen(true);
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   };
 
-  const formatCurrency = (amount: number) => {
-    return `${amount.toFixed(2)} TND`;
-  };
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (!user || !isAdmin) {
-    return null;
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="text-center text-red-500">
+            Accès refusé. Vous devez être administrateur pour accéder à cette page.
+          </div>
+        </div>
+      </Layout>
+    );
   }
 
   return (
@@ -499,57 +309,159 @@ const ProductManagement = () => {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-sonoff-blue">Gestion des Produits</h1>
           
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="outline" onClick={() => navigate('/admin')}>
-                  Retour au dashboard
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Retourner au tableau de bord d'administration</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setEditingProduct(null); }}>
+                <Plus className="mr-2 h-4 w-4" /> Ajouter un produit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingProduct ? 'Modifier le produit' : 'Ajouter un produit'}
+                </DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="name">Nom</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => {
+                        setFormData({ 
+                          ...formData, 
+                          name: e.target.value,
+                          slug: generateSlug(e.target.value)
+                        });
+                      }}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="slug">Slug</Label>
+                    <Input
+                      id="slug"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="price">Prix (DT)</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.001"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="stock">Stock</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      value={formData.stock_quantity}
+                      onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="category">Catégorie</Label>
+                  <Select
+                    value={formData.category_id}
+                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner une catégorie" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="image">URL de l'image</Label>
+                  <Input
+                    id="image"
+                    value={formData.main_image_url}
+                    onChange={(e) => setFormData({ ...formData, main_image_url: e.target.value })}
+                  />
+                </div>
+                
+                <div className="flex space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="featured"
+                      checked={formData.featured}
+                      onCheckedChange={(checked) => setFormData({ ...formData, featured: checked as boolean })}
+                    />
+                    <Label htmlFor="featured">Produit en avant</Label>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="hidden"
+                      checked={formData.hidden}
+                      onCheckedChange={(checked) => setFormData({ ...formData, hidden: checked as boolean })}
+                    />
+                    <Label htmlFor="hidden">Masquer produit</Label>
+                  </div>
+                </div>
+                
+                <DialogFooter>
+                  <Button type="submit">
+                    {editingProduct ? 'Modifier' : 'Créer'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button onClick={() => setIsAddDialogOpen(true)} className="bg-sonoff-blue hover:bg-sonoff-teal">
-                  <Plus className="mr-2 h-4 w-4" /> Ajouter un produit
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Créer un nouveau produit</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          
-          <div className="relative w-full md:w-1/3">
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
             <Input
-              type="text"
               placeholder="Rechercher un produit..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10"
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <Table>
-            <TableCaption>Liste des produits</TableCaption>
             <TableHeader>
               <TableRow>
-                <TableHead>Image</TableHead>
                 <TableHead>Nom</TableHead>
+                <TableHead>Catégorie</TableHead>
                 <TableHead>Prix</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead>En avant</TableHead>
+                <TableHead className="text-center">En avant</TableHead>
+                <TableHead className="text-center">Visible</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -560,69 +472,59 @@ const ProductManagement = () => {
                 </TableRow>
               ) : filteredProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
-                    {searchQuery ? 'Aucun produit ne correspond à votre recherche' : 'Aucun produit trouvé'}
-                  </TableCell>
+                  <TableCell colSpan={7} className="text-center">Aucun produit trouvé</TableCell>
                 </TableRow>
               ) : (
                 filteredProducts.map((product) => (
                   <TableRow key={product.id}>
-                    <TableCell>
-                      {product.main_image_url ? (
-                        <div className="h-14 w-14 rounded overflow-hidden">
-                          <img 
-                            src={product.main_image_url} 
-                            alt={product.name} 
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="h-14 w-14 bg-gray-200 rounded flex items-center justify-center">
-                          <Image className="h-6 w-6 text-gray-400" />
-                        </div>
-                      )}
-                    </TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{formatCurrency(product.price)}</TableCell>
+                    <TableCell>{product.categories?.name || 'Sans catégorie'}</TableCell>
+                    <TableCell>{product.price.toFixed(3)} DT</TableCell>
                     <TableCell>{product.stock_quantity}</TableCell>
-                    <TableCell>{product.category_name || '-'}</TableCell>
-                    <TableCell>{product.featured ? <CheckCircle className="h-5 w-5 text-green-500" /> : '-'}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleFeatured(product.id, product.featured)}
+                        className="p-1"
+                      >
+                        {product.featured ? (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        ) : (
+                          <StarOff className="h-4 w-4 text-gray-400" />
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleHidden(product.id, product.hidden)}
+                        className="p-1"
+                      >
+                        {product.hidden ? (
+                          <EyeOff className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-green-500" />
+                        )}
+                      </Button>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-2">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => openEditDialog(product)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Modifier ce produit</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="border-red-300 hover:bg-red-50"
-                                onClick={() => openDeleteDialog(product)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Supprimer ce produit</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(product)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -631,493 +533,6 @@ const ProductManagement = () => {
             </TableBody>
           </Table>
         </div>
-
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Ajouter un produit</DialogTitle>
-              <DialogDescription>
-                Remplissez le formulaire pour ajouter un nouveau produit
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleAddProduct)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nom du produit *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nom du produit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="slug"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Slug *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="slug-du-produit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prix *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="0.00" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="stock_quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantité en stock *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="0" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="category_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Catégorie</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner une catégorie" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectGroup>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="featured"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between space-y-0 p-4 rounded-md border">
-                        <div>
-                          <FormLabel>En avant</FormLabel>
-                          <p className="text-sm text-gray-500">
-                            Mettre ce produit en avant sur la page d'accueil
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Description du produit"
-                          className="min-h-[120px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="space-y-4">
-                  <div>
-                    <FormLabel>Image principale</FormLabel>
-                    <div className="mt-2 flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => mainImageInputRef.current?.click()}
-                      >
-                        <Image className="mr-2 h-4 w-4" />
-                        Parcourir
-                      </Button>
-                      <input
-                        ref={mainImageInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleMainImageChange}
-                      />
-                      {mainImagePreview && (
-                        <div className="h-20 w-20 rounded overflow-hidden">
-                          <img
-                            src={mainImagePreview}
-                            alt="Aperçu"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <FormLabel>Images additionnelles (max 3)</FormLabel>
-                    <div className="mt-2 flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => additionalImagesInputRef.current?.click()}
-                      >
-                        <Image className="mr-2 h-4 w-4" />
-                        Parcourir
-                      </Button>
-                      <input
-                        ref={additionalImagesInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleAdditionalImagesChange}
-                      />
-                      <div className="flex gap-2">
-                        {additionalImagePreviews.map((src, index) => (
-                          <div key={index} className="h-20 w-20 rounded overflow-hidden">
-                            <img
-                              src={src}
-                              alt={`Aperçu ${index + 1}`}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsAddDialogOpen(false)}
-                  >
-                    Annuler
-                  </Button>
-                  <Button type="submit" className="bg-sonoff-blue hover:bg-sonoff-teal">
-                    Ajouter
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Modifier le produit</DialogTitle>
-              <DialogDescription>
-                Modifiez les informations du produit
-              </DialogDescription>
-            </DialogHeader>
-            
-            <Form {...editForm}>
-              <form onSubmit={editForm.handleSubmit(handleEditProduct)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={editForm.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nom du produit *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Nom du produit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={editForm.control}
-                    name="slug"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Slug *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="slug-du-produit" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={editForm.control}
-                    name="price"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Prix *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            step="0.01" 
-                            placeholder="0.00" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={editForm.control}
-                    name="stock_quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Quantité en stock *</FormLabel>
-                        <FormControl>
-                          <Input 
-                            type="number" 
-                            placeholder="0" 
-                            {...field} 
-                            onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={editForm.control}
-                    name="category_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Catégorie</FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Sélectionner une catégorie" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectGroup>
-                              {categories.map((category) => (
-                                <SelectItem key={category.id} value={category.id}>
-                                  {category.name}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={editForm.control}
-                    name="featured"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between space-y-0 p-4 rounded-md border">
-                        <div>
-                          <FormLabel>En avant</FormLabel>
-                          <p className="text-sm text-gray-500">
-                            Mettre ce produit en avant sur la page d'accueil
-                          </p>
-                        </div>
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                <FormField
-                  control={editForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Description du produit"
-                          className="min-h-[120px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <div className="space-y-4">
-                  <div>
-                    <FormLabel>Image principale</FormLabel>
-                    <div className="mt-2 flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => mainImageInputRef.current?.click()}
-                      >
-                        <Image className="mr-2 h-4 w-4" />
-                        Changer d'image
-                      </Button>
-                      <input
-                        ref={mainImageInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleMainImageChange}
-                      />
-                      {mainImagePreview && (
-                        <div className="h-20 w-20 rounded overflow-hidden">
-                          <img
-                            src={mainImagePreview}
-                            alt="Aperçu"
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <FormLabel>Images additionnelles (max 3)</FormLabel>
-                    <div className="mt-2 flex items-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => additionalImagesInputRef.current?.click()}
-                      >
-                        <Image className="mr-2 h-4 w-4" />
-                        Parcourir
-                      </Button>
-                      <input
-                        ref={additionalImagesInputRef}
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleAdditionalImagesChange}
-                      />
-                      <div className="flex gap-2">
-                        {additionalImagePreviews.map((src, index) => (
-                          <div key={index} className="h-20 w-20 rounded overflow-hidden">
-                            <img
-                              src={src}
-                              alt={`Aperçu ${index + 1}`}
-                              className="h-full w-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end space-x-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditDialogOpen(false)}
-                  >
-                    Annuler
-                  </Button>
-                  <Button type="submit" className="bg-sonoff-blue hover:bg-sonoff-teal">
-                    Sauvegarder
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Confirmer la suppression</DialogTitle>
-              <DialogDescription>
-                Voulez-vous vraiment supprimer ce produit? Cette action est irréversible.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end space-x-4 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteDialogOpen(false)}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteProduct}
-              >
-                Supprimer
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
       </div>
     </Layout>
   );

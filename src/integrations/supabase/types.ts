@@ -137,6 +137,7 @@ export type Database = {
           id: string
           message: string | null
           phone: string
+          status: string | null
         }
         Insert: {
           created_at?: string
@@ -145,6 +146,7 @@ export type Database = {
           id?: string
           message?: string | null
           phone: string
+          status?: string | null
         }
         Update: {
           created_at?: string
@@ -153,6 +155,7 @@ export type Database = {
           id?: string
           message?: string | null
           phone?: string
+          status?: string | null
         }
         Relationships: []
       }
@@ -411,6 +414,7 @@ export type Database = {
           created_at: string
           description: string | null
           featured: boolean | null
+          hidden: boolean | null
           id: string
           main_image_url: string | null
           name: string
@@ -426,6 +430,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean | null
+          hidden?: boolean | null
           id?: string
           main_image_url?: string | null
           name: string
@@ -441,6 +446,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean | null
+          hidden?: boolean | null
           id?: string
           main_image_url?: string | null
           name?: string

@@ -34,6 +34,20 @@ interface Customer {
   email?: string;
 }
 
+interface Order {
+  id: string;
+  customer_name: string;
+  customer_phone: string;
+  customer_address: string;
+  total_amount: number;
+  status: string;
+  order_items?: Array<{
+    product_name: string;
+    quantity: number;
+    price: number;
+  }>;
+}
+
 const InvoiceDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -41,6 +55,7 @@ const InvoiceDetail = () => {
   const { toast } = useToast();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -54,40 +69,74 @@ const InvoiceDetail = () => {
         variant: "destructive",
       });
     } else if (id) {
-      fetchInvoice();
+      fetchData();
     }
   }, [user, isAdmin, navigate, toast, id]);
 
-  const fetchInvoice = async () => {
+  const fetchData = async () => {
     if (!id) return;
     
     setLoading(true);
     try {
-      // Fetch invoice
+      // Try to fetch invoice first
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (invoiceError) throw invoiceError;
-      setInvoice(invoiceData);
+      if (invoiceError && invoiceError.code !== 'PGRST116') {
+        throw invoiceError;
+      }
 
-      // Fetch customer
-      if (invoiceData?.customer_id) {
-        const { data: customerData, error: customerError } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('id', invoiceData.customer_id)
-          .single();
+      if (invoiceData) {
+        setInvoice(invoiceData);
+        
+        // Fetch customer for the invoice
+        if (invoiceData.customer_id) {
+          const { data: customerData, error: customerError } = await supabase
+            .from('customers')
+            .select('*')
+            .eq('id', invoiceData.customer_id)
+            .maybeSingle();
 
-        if (customerError) throw customerError;
-        setCustomer(customerData);
+          if (customerError && customerError.code !== 'PGRST116') {
+            throw customerError;
+          }
+          
+          if (customerData) {
+            setCustomer(customerData);
+          }
+        }
+      } else {
+        // If no invoice found, try to fetch order and create invoice data for preview
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              id,
+              product_name,
+              quantity,
+              price
+            )
+          `)
+          .eq('id', id)
+          .maybeSingle();
+
+        if (orderError && orderError.code !== 'PGRST116') {
+          throw orderError;
+        }
+
+        if (orderData) {
+          setOrder(orderData);
+        }
       }
     } catch (error: any) {
+      console.error('Error fetching data:', error);
       toast({
         title: "Erreur",
-        description: `Impossible de charger la facture: ${error.message}`,
+        description: `Impossible de charger les données: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -103,18 +152,18 @@ const InvoiceDetail = () => {
     return (
       <Layout>
         <div className="container mx-auto py-8">
-          <div className="text-center">Chargement de la facture...</div>
+          <div className="text-center">Chargement...</div>
         </div>
       </Layout>
     );
   }
 
-  if (!invoice) {
+  if (!invoice && !order) {
     return (
       <Layout>
         <div className="container mx-auto py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Facture non trouvée</h1>
+            <h1 className="text-2xl font-bold mb-4">Données non trouvées</h1>
             <Button onClick={() => navigate('/admin/invoices')}>
               Retour aux factures
             </Button>
@@ -124,8 +173,142 @@ const InvoiceDetail = () => {
     );
   }
 
-  // Parse items safely from Json type
-  const items = Array.isArray(invoice.items) ? invoice.items : [];
+  // If we have an order but no invoice, show order preview for invoice generation
+  if (order && !invoice) {
+    const items = order.order_items || [];
+    const subtotalHT = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+    const tva = subtotalHT * 0.19; // 19% TVA
+    const timbreFiscal = 1;
+    const totalTTC = subtotalHT + tva + timbreFiscal;
+
+    return (
+      <Layout>
+        <div className="container mx-auto py-8">
+          <div className="flex justify-between items-center mb-8">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/admin/invoices')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Retour
+              </Button>
+              <h1 className="text-3xl font-bold text-sonoff-blue">
+                Aperçu commande {order.id.slice(0, 8)}
+              </h1>
+            </div>
+            <Button 
+              onClick={() => navigate(`/admin/invoices/new?orderId=${order.id}`)}
+              className="flex items-center gap-2"
+            >
+              Générer la facture
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Order Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Informations de la commande</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="font-medium">ID:</span> {order.id}
+                </div>
+                <div>
+                  <span className="font-medium">Statut:</span> {order.status}
+                </div>
+                <div>
+                  <span className="font-medium">Montant total:</span> {order.total_amount.toFixed(2)} DT
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Customer Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Informations client</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <span className="font-medium">Nom:</span> {order.customer_name}
+                </div>
+                <div>
+                  <span className="font-medium">Téléphone:</span> {order.customer_phone}
+                </div>
+                <div>
+                  <span className="font-medium">Adresse:</span>
+                  <p className="mt-1 text-sm text-gray-600">{order.customer_address}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Items */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Articles</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2">Article</th>
+                        <th className="text-right p-2">Quantité</th>
+                        <th className="text-right p-2">Prix unitaire</th>
+                        <th className="text-right p-2">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.map((item, index) => (
+                        <tr key={index} className="border-b">
+                          <td className="p-2">{item.product_name}</td>
+                          <td className="text-right p-2">{item.quantity}</td>
+                          <td className="text-right p-2">{item.price.toFixed(2)} DT</td>
+                          <td className="text-right p-2">{(item.quantity * item.price).toFixed(2)} DT</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Totals Preview */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Récapitulatif prévisionnel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-w-sm ml-auto">
+                  <div className="flex justify-between">
+                    <span>Sous-total HT:</span>
+                    <span>{subtotalHT.toFixed(2)} DT</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>TVA (19%):</span>
+                    <span>{tva.toFixed(2)} DT</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Timbre fiscal:</span>
+                    <span>{timbreFiscal.toFixed(2)} DT</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                    <span>Total TTC:</span>
+                    <span>{totalTTC.toFixed(2)} DT</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Display invoice if we have one
+  const items = Array.isArray(invoice?.items) ? invoice.items : [];
 
   return (
     <Layout>
@@ -141,7 +324,7 @@ const InvoiceDetail = () => {
               Retour
             </Button>
             <h1 className="text-3xl font-bold text-sonoff-blue">
-              Facture {invoice.invoice_number}
+              Facture {invoice?.invoice_number}
             </h1>
           </div>
           <div className="space-x-2">
@@ -164,13 +347,13 @@ const InvoiceDetail = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <span className="font-medium">Numéro:</span> {invoice.invoice_number}
+                <span className="font-medium">Numéro:</span> {invoice?.invoice_number}
               </div>
               <div>
-                <span className="font-medium">Date:</span> {format(new Date(invoice.invoice_date), 'PPP', { locale: fr })}
+                <span className="font-medium">Date:</span> {invoice?.invoice_date && format(new Date(invoice.invoice_date), 'PPP', { locale: fr })}
               </div>
               <div>
-                <span className="font-medium">Créée le:</span> {format(new Date(invoice.created_at), 'PPP à HH:mm', { locale: fr })}
+                <span className="font-medium">Créée le:</span> {invoice?.created_at && format(new Date(invoice.created_at), 'PPP à HH:mm', { locale: fr })}
               </div>
             </CardContent>
           </Card>
@@ -241,19 +424,19 @@ const InvoiceDetail = () => {
               <div className="space-y-2 max-w-sm ml-auto">
                 <div className="flex justify-between">
                   <span>Sous-total HT:</span>
-                  <span>{invoice.subtotal_ht.toFixed(2)} DT</span>
+                  <span>{invoice?.subtotal_ht.toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between">
                   <span>TVA:</span>
-                  <span>{invoice.tva.toFixed(2)} DT</span>
+                  <span>{invoice?.tva.toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Timbre fiscal:</span>
-                  <span>{invoice.timbre_fiscal.toFixed(2)} DT</span>
+                  <span>{invoice?.timbre_fiscal.toFixed(2)} DT</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg border-t pt-2">
                   <span>Total TTC:</span>
-                  <span>{invoice.total_ttc.toFixed(2)} DT</span>
+                  <span>{invoice?.total_ttc.toFixed(2)} DT</span>
                 </div>
               </div>
             </CardContent>
