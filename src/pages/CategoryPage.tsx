@@ -17,7 +17,7 @@ const categoryNames: Record<string, string> = {
 };
 
 const CategoryPage = () => {
-  const { categoryId } = useParams<{ categoryId: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryName, setCategoryName] = useState('Produits');
   const [loading, setLoading] = useState(true);
@@ -25,51 +25,60 @@ const CategoryPage = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      if (!categoryId) return;
-      
       setLoading(true);
       try {
-        // First, get the category details by slug
-        const { data: categoryData, error: categoryError } = await supabase
-          .from('categories')
-          .select('name, id')
-          .eq('slug', categoryId)
-          .maybeSingle();
-
-        if (categoryError) throw categoryError;
-        
-        let categoryIdValue: string | null = null;
-        
-        if (categoryData) {
-          setCategoryName(categoryData.name);
-          categoryIdValue = categoryData.id;
-        } else {
-          // Fallback: Set the category name from our hardcoded map
-          setCategoryName(categoryNames[categoryId] || 'Produits');
-        }
-        
-        // Fetch products based on the category slug instead of ID
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('*, categories(name)')
-          .eq(categoryIdValue ? 'category_id' : 'categories.slug', categoryIdValue || categoryId);
-
-        if (productsError) {
-          // If the first query fails, try getting products by category slug match
-          const { data: altProductsData, error: altError } = await supabase
+        if (!slug) {
+          // If no slug, show all products
+          const { data: allProductsData, error: allProductsError } = await supabase
             .from('products')
-            .select('*, categories(name, slug)')
-            .eq('categories.slug', categoryId);
-            
-          if (altError) throw altError;
+            .select('*, categories(name)');
+
+          if (allProductsError) throw allProductsError;
           
-          if (altProductsData && altProductsData.length > 0) {
-            const formattedProducts = altProductsData.map(product => ({
+          if (allProductsData) {
+            const formattedProducts = allProductsData.map(product => ({
               id: product.id,
               name: product.name,
               price: product.price,
               imageUrl: product.main_image_url || '/placeholder.svg',
-              category: product.categories?.name || categoryName,
+              category: product.categories?.name || 'Sans catégorie',
+              description: product.description || '',
+              stock: product.stock_quantity
+            }));
+            
+            setProducts(formattedProducts);
+            setCategoryName('Tous les produits');
+          }
+          return;
+        }
+        
+        // First, get the category details by slug
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('name, id')
+          .eq('slug', slug)
+          .maybeSingle();
+
+        if (categoryError) throw categoryError;
+        
+        if (categoryData) {
+          setCategoryName(categoryData.name);
+          
+          // Fetch products for this category
+          const { data: productsData, error: productsError } = await supabase
+            .from('products')
+            .select('*, categories(name)')
+            .eq('category_id', categoryData.id);
+
+          if (productsError) throw productsError;
+          
+          if (productsData) {
+            const formattedProducts = productsData.map(product => ({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              imageUrl: product.main_image_url || '/placeholder.svg',
+              category: product.categories?.name || categoryData.name,
               description: product.description || '',
               stock: product.stock_quantity
             }));
@@ -77,23 +86,17 @@ const CategoryPage = () => {
             setProducts(formattedProducts);
           } else {
             setProducts([]);
-            console.log('No products found using alt method');
           }
-        } else if (productsData && productsData.length > 0) {
-          const formattedProducts = productsData.map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.main_image_url || '/placeholder.svg',
-            category: product.categories?.name || categoryName,
-            description: product.description || '',
-            stock: product.stock_quantity
-          }));
-          
-          setProducts(formattedProducts);
         } else {
+          // Fallback: Set the category name from our hardcoded map
+          setCategoryName(categoryNames[slug] || 'Produits');
           setProducts([]);
-          console.log('No products found for category ID:', categoryIdValue);
+          
+          toast({
+            title: "Catégorie non trouvée",
+            description: `La catégorie "${slug}" n'existe pas.`,
+            variant: "destructive",
+          });
         }
       } catch (error: any) {
         console.error('Error fetching products:', error);
@@ -109,7 +112,7 @@ const CategoryPage = () => {
     };
 
     fetchProducts();
-  }, [categoryId, toast]);
+  }, [slug, toast]);
 
   return (
     <Layout>
