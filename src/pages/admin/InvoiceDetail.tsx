@@ -10,18 +10,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Json } from '@/integrations/supabase/types';
 
 interface Invoice {
   id: string;
   invoice_number: string;
   customer_id: string;
   invoice_date: string;
-  items: any[];
+  items: Json;
   subtotal_ht: number;
   tva: number;
   timbre_fiscal: number;
   total_ttc: number;
   created_at: string;
+  created_by: string | null;
 }
 
 interface Customer {
@@ -122,6 +124,9 @@ const InvoiceDetail = () => {
     );
   }
 
+  // Parse items safely from Json type
+  const items = Array.isArray(invoice.items) ? invoice.items : [];
+
   return (
     <Layout>
       <div className="container mx-auto py-8">
@@ -213,12 +218,12 @@ const InvoiceDetail = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {invoice.items.map((item: any, index: number) => (
+                    {items.map((item: any, index: number) => (
                       <tr key={index} className="border-b">
-                        <td className="p-2">{item.name}</td>
+                        <td className="p-2">{item.name || item.description}</td>
                         <td className="text-right p-2">{item.quantity}</td>
-                        <td className="text-right p-2">{item.price.toFixed(2)} DT</td>
-                        <td className="text-right p-2">{(item.quantity * item.price).toFixed(2)} DT</td>
+                        <td className="text-right p-2">{item.price?.toFixed(2) || item.unitPrice?.toFixed(2)} DT</td>
+                        <td className="text-right p-2">{((item.quantity * (item.price || item.unitPrice)) || item.total)?.toFixed(2)} DT</td>
                       </tr>
                     ))}
                   </tbody>
