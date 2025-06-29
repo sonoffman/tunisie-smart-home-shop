@@ -1,56 +1,184 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Phone, Mail, MapPin } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ContactInfo {
+  phone: string;
+  email: string;
+  address: string;
+}
 
 const Footer = () => {
+  const [contactInfo, setContactInfo] = useState<ContactInfo>({
+    phone: "50330000",
+    email: "contact@sonoff-tunisie.com",
+    address: "Tunis, Tunisie"
+  });
+
+  useEffect(() => {
+    const fetchContactInfo = async () => {
+      try {
+        // Essayer d'abord de récupérer depuis la table contact_info
+        const { data: contactData, error: contactError } = await supabase
+          .from('contact_info')
+          .select('*')
+          .maybeSingle();
+        
+        if (!contactError && contactData) {
+          setContactInfo({
+            phone: contactData.phone || contactInfo.phone,
+            email: contactData.email || contactInfo.email,
+            address: contactData.address || contactInfo.address
+          });
+          return;
+        }
+        
+        // Fallback: récupérer depuis cms_pages
+        const { data, error } = await supabase
+          .from('cms_pages')
+          .select('content')
+          .eq('slug', 'contact-info')
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        if (data?.content) {
+          try {
+            const parsedInfo = JSON.parse(data.content);
+            setContactInfo({
+              phone: parsedInfo.phone || contactInfo.phone,
+              email: parsedInfo.email || contactInfo.email,
+              address: parsedInfo.address || contactInfo.address
+            });
+          } catch (parseError) {
+            console.error("Error parsing contact info JSON:", parseError);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching contact info:", error);
+      }
+    };
+
+    fetchContactInfo();
+  }, []);
+
   return (
-    <footer className="bg-gray-800 text-white">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-gray-100 pt-12 pb-6 mt-16">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {/* Column 1: SONOFF Tunisie */}
           <div>
-            <h3 className="text-lg font-semibold mb-4">Smart Home Shop</h3>
-            <p className="text-gray-300">
-              Votre boutique spécialisée en domotique et maison intelligente en Tunisie.
+            <h3 className="text-xl font-bold text-sonoff-blue mb-4">SONOFF Tunisie</h3>
+            <p className="text-gray-600">
+              Votre partenaire de confiance pour les solutions domotiques intelligentes.
             </p>
           </div>
-          
+
+          {/* Column 2: Services */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Navigation</h4>
-            <ul className="space-y-2 text-gray-300">
-              <li><Link to="/" className="hover:text-white">Accueil</Link></li>
-              <li><Link to="/blog" className="hover:text-white">Blog</Link></li>
-              <li><Link to="/formation" className="hover:text-white">Formation</Link></li>
-            </ul>
-          </div>
-          
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Services</h4>
-            <ul className="space-y-2 text-gray-300">
+            <h3 className="text-xl font-bold text-sonoff-blue mb-4">Service</h3>
+            <ul className="space-y-2">
               <li>
-                <Link to="/verify-product" className="hover:text-white">
-                  <strong>Vérification du numéro de série</strong>
+                <Link 
+                  to="/verify-product" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  Vérification du numéro de série
                 </Link>
               </li>
               <li>
-                <Link to="/formation" className="hover:text-white">
-                  <strong>Inscription à une <span className="text-blue-400">formation</span></strong>
+                <Link 
+                  to="/blog" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/training" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  Inscription à une formation
                 </Link>
               </li>
             </ul>
           </div>
-          
+
+          {/* Column 3: Contact */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Contact</h4>
-            <div className="space-y-2 text-gray-300">
-              <p>📧 contact@smarthomeshop.tn</p>
-              <p>📞 +216 XX XXX XXX</p>
-              <p>📍 Tunis, Tunisie</p>
-            </div>
+            <h3 className="text-xl font-bold text-sonoff-blue mb-4">Contact</h3>
+            <ul className="space-y-2">
+              <li className="flex items-center text-gray-600">
+                <Phone size={18} className="mr-2 text-sonoff-blue" />
+                <a href={`tel:${contactInfo.phone}`} className="hover:text-sonoff-blue transition-colors">
+                  {contactInfo.phone}
+                </a>
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Mail size={18} className="mr-2 text-sonoff-blue" />
+                <a href={`mailto:${contactInfo.email}`} className="hover:text-sonoff-blue transition-colors">
+                  {contactInfo.email}
+                </a>
+              </li>
+              <li className="flex items-center text-gray-600">
+                <MapPin size={18} className="mr-2 text-sonoff-blue" />
+                <a 
+                  href="https://www.google.com/maps?q=36.734334,10.312741" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hover:text-sonoff-blue transition-colors cursor-pointer"
+                >
+                  {contactInfo.address}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Informations */}
+          <div>
+            <h3 className="text-xl font-bold text-sonoff-blue mb-4">Informations</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link 
+                  to="/about" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  À propos de nous
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/terms" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  Conditions d'utilisation
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/privacy" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  Politique de confidentialité
+                </Link>
+              </li>
+              <li>
+                <Link 
+                  to="/shipping" 
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                >
+                  Livraison et retours
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
-        
-        <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
-          <p>&copy; 2024 Smart Home Shop Tunisie. Tous droits réservés.</p>
+
+        <div className="border-t border-gray-200 mt-10 pt-6 text-center">
+          <p className="text-gray-500">© 2025 SONOFF Tunisie. Tous droits réservés.</p>
         </div>
       </div>
     </footer>
