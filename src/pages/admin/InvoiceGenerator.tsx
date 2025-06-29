@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -142,6 +141,10 @@ const InvoiceGenerator = () => {
     setTaxes(calculatedTaxes);
   };
 
+  const handleInvoiceNumberChange = (number: string) => {
+    setInvoiceNumber(number);
+  };
+
   const generatePDF = async () => {
     if (!selectedCustomer) {
       toast({
@@ -245,6 +248,7 @@ const InvoiceGenerator = () => {
             <InvoiceHeader 
               invoiceNumber={invoiceNumber}
               invoiceDate={invoiceDate}
+              onNumberChange={handleInvoiceNumberChange}
               onDateChange={setInvoiceDate}
             />
             <CustomerSelector 
