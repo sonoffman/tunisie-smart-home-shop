@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import ProductCard from './ProductCard';
 import { Product } from '@/types/product';
@@ -9,12 +10,14 @@ interface ProductGridProps {
   products: Product[];
   title?: string;
   isAdmin?: boolean;
+  showAll?: boolean;
 }
 
 const ProductGrid: React.FC<ProductGridProps> = ({ 
   products, 
   title = "Nos Produits", 
-  isAdmin = false 
+  isAdmin = false,
+  showAll = false
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const isMobile = useIsMobile();
