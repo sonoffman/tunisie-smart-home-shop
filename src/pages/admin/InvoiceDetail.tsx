@@ -63,14 +63,25 @@ const InvoiceDetail = () => {
     
     setLoading(true);
     try {
-      // Fetch invoice
+      // Fetch invoice using maybeSingle to handle cases where no invoice exists
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (invoiceError) throw invoiceError;
+      
+      if (!invoiceData) {
+        toast({
+          title: "Facture introuvable",
+          description: "Aucune facture trouvée avec cet identifiant",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+      
       setInvoice(invoiceData);
 
       // Fetch customer
@@ -79,12 +90,13 @@ const InvoiceDetail = () => {
           .from('customers')
           .select('*')
           .eq('id', invoiceData.customer_id)
-          .single();
+          .maybeSingle();
 
         if (customerError) throw customerError;
         setCustomer(customerData);
       }
     } catch (error: any) {
+      console.error('Error fetching invoice:', error);
       toast({
         title: "Erreur",
         description: `Impossible de charger la facture: ${error.message}`,

@@ -15,14 +15,14 @@ const AllProducts = () => {
     const fetchAllProducts = async () => {
       setLoading(true);
       try {
-        // Récupérer tous les produits non masqués
+        // Fetch ALL products that are not hidden (both featured and non-featured)
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             *,
             categories(name)
           `)
-          .eq('hidden', false)
+          .eq('hidden', false) // Only exclude hidden products
           .order('name');
 
         if (error) throw error;
@@ -44,7 +44,7 @@ const AllProducts = () => {
           setProducts([]);
         }
       } catch (error: any) {
-        console.error('Error fetching products:', error);
+        console.error('Error fetching all products:', error);
         toast({
           title: "Erreur",
           description: `Impossible de charger les produits: ${error.message}`,
@@ -65,6 +65,7 @@ const AllProducts = () => {
         <ProductGrid 
           products={loading ? [] : products} 
           title="Tous les produits" 
+          showAll={true}
         />
       </div>
     </Layout>

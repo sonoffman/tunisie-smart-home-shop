@@ -3,6 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 interface BannerAccordion {
   id: string;
@@ -41,6 +48,26 @@ const DynamicImageAccordion = () => {
     };
 
     fetchBanners();
+
+    // Set up real-time subscription for banner updates
+    const channel = supabase
+      .channel('banner_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'banner_accordion'
+        },
+        () => {
+          fetchBanners();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   if (loading) {
@@ -52,42 +79,47 @@ const DynamicImageAccordion = () => {
   }
 
   return (
-    <div className="relative w-full h-96 overflow-hidden rounded-lg shadow-lg">
-      {banners.map((banner, index) => (
-        <div
-          key={banner.id}
-          className={`absolute inset-0 transition-opacity duration-500 ${
-            index === 0 ? 'opacity-100' : 'opacity-0'
-          }`}
-          style={{
-            backgroundImage: `url(${banner.image})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-        >
-          <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-            <div className="text-center text-white max-w-2xl px-4">
-              <h1 className="text-4xl md:text-6xl font-bold mb-4">
-                {banner.titre}
-              </h1>
-              <p className="text-lg md:text-xl mb-8 opacity-90">
-                {banner.description}
-              </p>
-              {banner.lien_bouton && (
-                <Button 
-                  asChild 
-                  size="lg" 
-                  className="bg-sonoff-orange hover:bg-sonoff-orange/90 text-white px-8 py-3 text-lg"
-                >
-                  <Link to={banner.lien_bouton}>
-                    {banner.texte_bouton}
-                  </Link>
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="relative w-full">
+      <Carousel className="w-full">
+        <CarouselContent>
+          {banners.map((banner) => (
+            <CarouselItem key={banner.id}>
+              <div 
+                className="relative w-full h-96 overflow-hidden rounded-lg shadow-lg"
+                style={{
+                  backgroundImage: `url(${banner.image})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+                  <div className="text-center text-white max-w-2xl px-4">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4">
+                      {banner.titre}
+                    </h1>
+                    <p className="text-lg md:text-xl mb-8 opacity-90">
+                      {banner.description}
+                    </p>
+                    {banner.lien_bouton && (
+                      <Button 
+                        asChild 
+                        size="lg" 
+                        className="bg-sonoff-orange hover:bg-sonoff-orange/90 text-white px-8 py-3 text-lg"
+                      >
+                        <Link to={banner.lien_bouton}>
+                          {banner.texte_bouton}
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious />
+        <CarouselNext />
+      </Carousel>
     </div>
   );
 };
