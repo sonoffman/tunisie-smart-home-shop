@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,7 @@ import InvoiceHeader from '@/components/invoice/InvoiceHeader';
 import InvoiceItemList from '@/components/invoice/InvoiceItemList';
 import InvoiceSummary from '@/components/invoice/InvoiceSummary';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
-import InvoicePdfGenerator from '@/components/invoice/InvoicePdfGenerator';
+import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
 import { Customer, InvoiceItem } from '@/types/supabase';
 
 const InvoiceGenerator = () => {
@@ -20,13 +21,14 @@ const InvoiceGenerator = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [subtotalHT, setSubtotalHT] = useState(0);
   const [tva, setTva] = useState(0);
-  const [timbreFiscal, setTimbreFiscal] = useState(0.6); // Default value
+  const [timbreFiscal, setTimbreFiscal] = useState(0.6);
   const [totalTTC, setTotalTTC] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -42,12 +44,31 @@ const InvoiceGenerator = () => {
       });
     } else {
       generateInvoiceNumber();
+      fetchCustomers();
     }
   }, [user, isAdmin, navigate, toast]);
 
+  const fetchCustomers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les clients",
+        variant: "destructive",
+      });
+    }
+  };
+
   const generateInvoiceNumber = async () => {
     try {
-      // Get the latest invoice number to generate the next one
       const { data, error } = await supabase
         .from('invoices')
         .select('invoice_number')
@@ -70,7 +91,6 @@ const InvoiceGenerator = () => {
       setInvoiceNumber(newInvoiceNumber);
     } catch (error) {
       console.error('Error generating invoice number:', error);
-      // Fallback to basic number
       const currentYear = new Date().getFullYear();
       setInvoiceNumber(`INV-${currentYear}-001`);
     }
@@ -104,15 +124,28 @@ const InvoiceGenerator = () => {
     setItems(items.filter(item => item.id !== id));
   };
 
-  useEffect(() => {
-    const newSubtotal = items.reduce((sum, item) => sum + item.total, 0);
-    const newTva = newSubtotal * 0.19; // 19% TVA
-    const newTotal = newSubtotal + newTva + timbreFiscal;
-    
-    setSubtotalHT(newSubtotal);
-    setTva(newTva);
-    setTotalTTC(newTotal);
-  }, [items, timbreFiscal]);
+  const handleCustomerChange = (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    setSelectedCustomer(customer || null);
+  };
+
+  const handleCustomerCreated = () => {
+    fetchCustomers();
+  };
+
+  const handleTaxCalculation = (values: {
+    subtotalHT: number;
+    tva: number;
+    timbreFiscal: number;
+    totalTTC: number;
+  }) => {
+    setSubtotalHT(values.subtotalHT);
+    setTva(values.tva);
+    setTimbreFiscal(values.timbreFiscal);
+    setTotalTTC(values.totalTTC);
+  };
+
+  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
 
   const saveInvoice = async () => {
     if (!selectedCustomer) {
@@ -145,7 +178,6 @@ const InvoiceGenerator = () => {
     setSaving(true);
     
     try {
-      // Check if invoice number already exists
       const { data: existingInvoice } = await supabase
         .from('invoices')
         .select('id')
@@ -166,7 +198,7 @@ const InvoiceGenerator = () => {
         invoice_number: invoiceNumber.trim(),
         customer_id: selectedCustomer.id,
         invoice_date: invoiceDate,
-        items: items,
+        items: items as any,
         subtotal_ht: subtotalHT,
         tva: tva,
         timbre_fiscal: timbreFiscal,
@@ -176,7 +208,7 @@ const InvoiceGenerator = () => {
 
       const { data, error } = await supabase
         .from('invoices')
-        .insert([invoiceData])
+        .insert(invoiceData)
         .select()
         .single();
 
@@ -187,7 +219,6 @@ const InvoiceGenerator = () => {
         description: "Facture créée avec succès",
       });
 
-      // Redirect to invoice detail
       navigate(`/admin/invoices/${data.id}`);
     } catch (error: any) {
       console.error('Error saving invoice:', error);
@@ -199,6 +230,32 @@ const InvoiceGenerator = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handlePreviewPdf = () => {
+    if (!selectedCustomer || items.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un client et ajouter des articles",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const pdf = generateInvoicePdf({
+      invoiceNumber,
+      invoiceDate,
+      customer: selectedCustomer,
+      items,
+      taxes: {
+        subtotalHT,
+        tva,
+        timbreFiscal,
+        totalTTC
+      }
+    });
+
+    pdf.output('dataurlnewwindow');
   };
 
   if (!user || !isAdmin) {
@@ -221,7 +278,7 @@ const InvoiceGenerator = () => {
             <h1 className="text-3xl font-bold text-sonoff-blue">Nouvelle Facture</h1>
           </div>
           <div className="space-x-2">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={handlePreviewPdf}>
               <Eye className="h-4 w-4" />
               Aperçu
             </Button>
@@ -237,22 +294,21 @@ const InvoiceGenerator = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Invoice Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Customer Selection */}
             <Card>
               <CardHeader>
                 <CardTitle>Client</CardTitle>
               </CardHeader>
               <CardContent>
                 <CustomerSelector 
+                  customers={customers}
                   selectedCustomer={selectedCustomer}
-                  onCustomerSelect={setSelectedCustomer}
+                  onCustomerChange={handleCustomerChange}
+                  onCustomerCreated={handleCustomerCreated}
                 />
               </CardContent>
             </Card>
 
-            {/* Invoice Header */}
             <Card>
               <CardHeader>
                 <CardTitle>Informations de la facture</CardTitle>
@@ -267,7 +323,6 @@ const InvoiceGenerator = () => {
               </CardContent>
             </Card>
 
-            {/* Invoice Items */}
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
@@ -281,29 +336,27 @@ const InvoiceGenerator = () => {
               <CardContent>
                 <InvoiceItemList
                   items={items}
-                  onUpdateItem={updateItem}
+                  onAddItem={addItem}
                   onRemoveItem={removeItem}
+                  onItemChange={updateItem}
                 />
               </CardContent>
             </Card>
           </div>
 
-          {/* Right Column - Summary */}
           <div className="space-y-6">
-            {/* Tax Calculator */}
             <Card>
               <CardHeader>
                 <CardTitle>Calculs</CardTitle>
               </CardHeader>
               <CardContent>
                 <InvoiceTaxCalculator
-                  timbreFiscal={timbreFiscal}
-                  onTimbreFiscalChange={setTimbreFiscal}
+                  subtotal={subtotal}
+                  onCalculate={handleTaxCalculation}
                 />
               </CardContent>
             </Card>
 
-            {/* Summary */}
             <Card>
               <CardHeader>
                 <CardTitle>Récapitulatif</CardTitle>
@@ -317,27 +370,6 @@ const InvoiceGenerator = () => {
                 />
               </CardContent>
             </Card>
-
-            {/* PDF Generator */}
-            {selectedCustomer && items.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Prévisualisation PDF</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <InvoicePdfGenerator
-                    invoiceNumber={invoiceNumber}
-                    invoiceDate={invoiceDate}
-                    customer={selectedCustomer}
-                    items={items}
-                    subtotalHT={subtotalHT}
-                    tva={tva}
-                    timbreFiscal={timbreFiscal}
-                    totalTTC={totalTTC}
-                  />
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </div>

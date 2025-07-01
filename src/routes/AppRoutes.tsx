@@ -67,10 +67,10 @@ const AppRoutes = () => {
       <Route path="/admin/banners" element={<BannerManagement />} />
       
       {/* CMS Pages */}
-      <Route path="/about" element={<CMSPage slug="about" />} />
-      <Route path="/terms" element={<CMSPage slug="terms" />} />
-      <Route path="/privacy" element={<CMSPage slug="privacy" />} />
-      <Route path="/shipping" element={<CMSPage slug="shipping" />} />
+      <Route path="/about" element={<CMSPage />} />
+      <Route path="/terms" element={<CMSPage />} />
+      <Route path="/privacy" element={<CMSPage />} />
+      <Route path="/shipping" element={<CMSPage />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
