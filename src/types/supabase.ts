@@ -52,7 +52,7 @@ export interface Order {
   total_amount: number;
   status: 'new' | 'processing' | 'shipped' | 'delivered' | 'pending' | 'validated' | 'cancelled';
   state: string;
-  order_items?: OrderItem[]; // Make order_items optional for the SalesManagement component
+  order_items?: OrderItem[];
 }
 
 export interface OrderItem {
@@ -69,5 +69,19 @@ export interface ContactFormSubmission {
   email: string;
   phone: string;
   message?: string;
+  status?: string;
   created_at: string;
+}
+
+export interface BannerAccordion {
+  id: string;
+  titre: string;
+  description: string;
+  image: string;
+  lien_bouton: string;
+  texte_bouton: string;
+  ordre: number;
+  actif: boolean;
+  created_at: string;
+  updated_at: string;
 }

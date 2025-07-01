@@ -1,33 +1,29 @@
 
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import DynamicImageAccordion from '@/components/DynamicImageAccordion';
 import ProductGrid from '@/components/ProductGrid';
-import ContactForm from '@/components/contact/ContactForm';
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 
-const HomePage = () => {
+const AllProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchAllProducts = async () => {
       setLoading(true);
       try {
-        // Fetch featured products to display - increased to 20
+        // Récupérer tous les produits non masqués
         const { data: products, error } = await supabase
           .from('products')
           .select(`
             *,
             categories(name)
           `)
-          .eq('featured', true)
           .eq('hidden', false)
-          .order('name')
-          .limit(20);
+          .order('name');
 
         if (error) throw error;
         
@@ -60,27 +56,19 @@ const HomePage = () => {
       }
     };
 
-    fetchProducts();
+    fetchAllProducts();
   }, [toast]);
 
   return (
     <Layout>
-      <DynamicImageAccordion />
       <div className="py-12">
-        <ProductGrid products={loading ? [] : products} title="Produits Populaires" />
-      </div>
-
-      {/* Contact Form Section */}
-      <div className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold text-center mb-8">Contactez-nous</h2>
-            <ContactForm />
-          </div>
-        </div>
+        <ProductGrid 
+          products={loading ? [] : products} 
+          title="Tous les produits" 
+        />
       </div>
     </Layout>
   );
 };
 
-export default HomePage;
+export default AllProducts;

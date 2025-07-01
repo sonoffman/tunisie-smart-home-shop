@@ -12,13 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Upload, ImageIcon, Trash2, Save } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-interface Banner {
+interface BannerAccordion {
   id: string;
-  title: string;
-  subtitle: string;
-  image_url: string;
-  link: string;
-  active: boolean;
+  titre: string;
+  description: string;
+  image: string;
+  lien_bouton: string;
+  texte_bouton: string;
+  ordre: number;
+  actif: boolean;
 }
 
 const BannerManagement = () => {
@@ -28,16 +30,18 @@ const BannerManagement = () => {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [banners, setBanners] = useState<Banner[]>([]);
+  const [banners, setBanners] = useState<BannerAccordion[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [bannerForm, setBannerForm] = useState({
     id: '',
-    title: '',
-    subtitle: '',
-    image_url: '',
-    link: '',
-    active: true,
+    titre: '',
+    description: '',
+    image: '',
+    lien_bouton: '',
+    texte_bouton: 'Découvrir',
+    ordre: 0,
+    actif: true,
   });
 
   useEffect(() => {
@@ -61,10 +65,9 @@ const BannerManagement = () => {
       const { data, error } = await supabase.storage.getBucket('banners');
       
       if (error && error.message.includes('The resource was not found')) {
-        // Create bucket if it doesn't exist
         const { error: createError } = await supabase.storage.createBucket('banners', {
           public: true,
-          fileSizeLimit: 1024 * 1024 * 10, // 10MB
+          fileSizeLimit: 1024 * 1024 * 10,
         });
         
         if (createError) throw createError;
@@ -89,19 +92,18 @@ const BannerManagement = () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('banners')
+        .from('banner_accordion')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('ordre');
 
       if (error) throw error;
       
       if (data) {
         setBanners(data);
         
-        // Load first banner into form if available
         if (data.length > 0) {
           setBannerForm(data[0]);
-          setPreviewUrl(data[0].image_url);
+          setPreviewUrl(data[0].image);
         }
       }
     } catch (error: any) {
@@ -128,14 +130,14 @@ const BannerManagement = () => {
     const { name, value } = e.target;
     setBannerForm({
       ...bannerForm,
-      [name]: value,
+      [name]: name === 'ordre' ? parseInt(value) || 0 : value,
     });
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBannerForm({
       ...bannerForm,
-      active: e.target.checked,
+      actif: e.target.checked,
     });
   };
 
@@ -143,9 +145,8 @@ const BannerManagement = () => {
     try {
       setSaving(true);
       
-      let imageUrl = bannerForm.image_url;
+      let imageUrl = bannerForm.image;
       
-      // Upload new image if selected
       if (selectedFile) {
         const fileName = `banner-${Date.now()}-${selectedFile.name.replace(/\s+/g, '-')}`;
         
@@ -165,41 +166,37 @@ const BannerManagement = () => {
       }
       
       const bannerData = {
-        title: bannerForm.title,
-        subtitle: bannerForm.subtitle,
-        image_url: imageUrl,
-        link: bannerForm.link,
-        active: bannerForm.active,
+        titre: bannerForm.titre,
+        description: bannerForm.description,
+        image: imageUrl,
+        lien_bouton: bannerForm.lien_bouton,
+        texte_bouton: bannerForm.texte_bouton,
+        ordre: bannerForm.ordre,
+        actif: bannerForm.actif,
       };
       
-      let result;
-      
       if (bannerForm.id) {
-        // Update existing banner
         const { data, error } = await supabase
-          .from('banners')
+          .from('banner_accordion')
           .update(bannerData)
           .eq('id', bannerForm.id)
           .select()
           .single();
           
         if (error) throw error;
-        result = data;
         
         toast({
           title: "Bannière mise à jour",
           description: "La bannière a été mise à jour avec succès",
         });
       } else {
-        // Create new banner
         const { data, error } = await supabase
-          .from('banners')
+          .from('banner_accordion')
           .insert([bannerData])
           .select()
           .single();
           
         if (error) throw error;
-        result = data;
         
         toast({
           title: "Bannière ajoutée",
@@ -207,10 +204,7 @@ const BannerManagement = () => {
         });
       }
       
-      // Reload banners
       fetchBanners();
-      
-      // Reset form for a new banner
       clearForm();
     } catch (error: any) {
       toast({
@@ -223,9 +217,9 @@ const BannerManagement = () => {
     }
   };
 
-  const handleEditBanner = (banner: Banner) => {
+  const handleEditBanner = (banner: BannerAccordion) => {
     setBannerForm(banner);
-    setPreviewUrl(banner.image_url);
+    setPreviewUrl(banner.image);
     setSelectedFile(null);
   };
 
@@ -233,48 +227,20 @@ const BannerManagement = () => {
     try {
       setSaving(true);
       
-      // Get current banner data to extract image URL
-      const { data: currentBanner, error: fetchError } = await supabase
-        .from('banners')
-        .select('image_url')
-        .eq('id', id)
-        .single();
-        
-      if (fetchError) throw fetchError;
-      
-      // Delete banner from database
       const { error: deleteError } = await supabase
-        .from('banners')
+        .from('banner_accordion')
         .delete()
         .eq('id', id);
         
       if (deleteError) throw deleteError;
-      
-      // Extract file path from URL
-      if (currentBanner?.image_url) {
-        try {
-          const url = new URL(currentBanner.image_url);
-          const filePath = url.pathname.split('/').slice(-2).join('/');
-          
-          if (filePath) {
-            await supabase.storage
-              .from('banners')
-              .remove([filePath]);
-          }
-        } catch (e) {
-          console.log("Couldn't delete storage file, it may be an external URL", e);
-        }
-      }
       
       toast({
         title: "Bannière supprimée",
         description: "La bannière a été supprimée avec succès",
       });
       
-      // Reload banners
       fetchBanners();
       
-      // Reset form if we were editing this banner
       if (bannerForm.id === id) {
         clearForm();
       }
@@ -292,11 +258,13 @@ const BannerManagement = () => {
   const clearForm = () => {
     setBannerForm({
       id: '',
-      title: '',
-      subtitle: '',
-      image_url: '',
-      link: '',
-      active: true,
+      titre: '',
+      description: '',
+      image: '',
+      lien_bouton: '',
+      texte_bouton: 'Découvrir',
+      ordre: banners.length + 1,
+      actif: true,
     });
     setSelectedFile(null);
     setPreviewUrl(null);
@@ -333,7 +301,6 @@ const BannerManagement = () => {
                 <CardTitle>{bannerForm.id ? "Modifier la bannière" : "Nouvelle bannière"}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Image upload */}
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">Image de la bannière</label>
                   
@@ -352,7 +319,7 @@ const BannerManagement = () => {
                             setSelectedFile(null);
                             setBannerForm({
                               ...bannerForm,
-                              image_url: '',
+                              image: '',
                             });
                           }}
                         >
@@ -381,51 +348,68 @@ const BannerManagement = () => {
                   </div>
                 </div>
 
-                {/* Title */}
                 <div className="space-y-1">
                   <label className="block text-sm font-medium text-gray-700">Titre</label>
                   <Input 
-                    name="title"
-                    value={bannerForm.title}
+                    name="titre"
+                    value={bannerForm.titre}
                     onChange={handleInputChange}
                     placeholder="Titre de la bannière"
                   />
                 </div>
 
-                {/* Subtitle */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Sous-titre</label>
+                  <label className="block text-sm font-medium text-gray-700">Description</label>
                   <Textarea 
-                    name="subtitle"
-                    value={bannerForm.subtitle}
+                    name="description"
+                    value={bannerForm.description}
                     onChange={handleInputChange}
-                    placeholder="Sous-titre ou description"
+                    placeholder="Description"
                     rows={3}
                   />
                 </div>
 
-                {/* Link */}
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">Lien</label>
+                  <label className="block text-sm font-medium text-gray-700">Lien du bouton</label>
                   <Input 
-                    name="link"
-                    value={bannerForm.link}
+                    name="lien_bouton"
+                    value={bannerForm.lien_bouton}
                     onChange={handleInputChange}
-                    placeholder="URL du lien (ex: /products/category/switches)"
+                    placeholder="/products/category/switches"
                   />
                 </div>
 
-                {/* Active */}
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">Texte du bouton</label>
+                  <Input 
+                    name="texte_bouton"
+                    value={bannerForm.texte_bouton}
+                    onChange={handleInputChange}
+                    placeholder="Découvrir"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">Ordre</label>
+                  <Input 
+                    name="ordre"
+                    type="number"
+                    value={bannerForm.ordre}
+                    onChange={handleInputChange}
+                    placeholder="0"
+                  />
+                </div>
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
-                    id="active"
-                    name="active"
-                    checked={bannerForm.active}
+                    id="actif"
+                    name="actif"
+                    checked={bannerForm.actif}
                     onChange={handleCheckboxChange}
                     className="h-4 w-4 text-sonoff-blue focus:ring-sonoff-blue border-gray-300 rounded"
                   />
-                  <label htmlFor="active" className="ml-2 block text-sm text-gray-700">
+                  <label htmlFor="actif" className="ml-2 block text-sm text-gray-700">
                     Bannière active
                   </label>
                 </div>
@@ -445,7 +429,7 @@ const BannerManagement = () => {
                       variant="outline"
                       onClick={clearForm}
                     >
-                      Annuler
+                      Nouveau
                     </Button>
                   )}
                 </div>
@@ -463,7 +447,7 @@ const BannerManagement = () => {
                   <div className="text-center py-6">Chargement des bannières...</div>
                 ) : banners.length === 0 ? (
                   <div className="text-center py-6 text-gray-500">
-                    Aucune bannière n'a été créée. Utilisez le formulaire pour ajouter votre première bannière.
+                    Aucune bannière trouvée.
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -474,25 +458,28 @@ const BannerManagement = () => {
                       >
                         <div className="md:w-1/3 h-40">
                           <img 
-                            src={banner.image_url} 
-                            alt={banner.title}
+                            src={banner.image} 
+                            alt={banner.titre}
                             className="w-full h-full object-cover"
                           />
                         </div>
                         <div className="p-4 md:w-2/3 flex flex-col">
                           <div className="flex-grow">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold">{banner.title}</h3>
-                              {!banner.active && (
+                              <h3 className="font-semibold">{banner.titre}</h3>
+                              <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-600 rounded">
+                                Ordre: {banner.ordre}
+                              </span>
+                              {!banner.actif && (
                                 <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
                                   Inactive
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm text-gray-600 mb-2">{banner.subtitle}</p>
-                            {banner.link && (
+                            <p className="text-sm text-gray-600 mb-2">{banner.description}</p>
+                            {banner.lien_bouton && (
                               <p className="text-xs text-blue-600 mb-4">
-                                Lien: {banner.link}
+                                Lien: {banner.lien_bouton} | Bouton: {banner.texte_bouton}
                               </p>
                             )}
                           </div>

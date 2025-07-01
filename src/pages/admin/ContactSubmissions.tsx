@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +25,14 @@ import {
   DialogTitle,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Download, Eye } from 'lucide-react';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Download, Eye, Trash2 } from 'lucide-react';
 import { ContactFormSubmission } from '@/types/supabase';
 
 const ContactSubmissions = () => {
@@ -61,7 +69,6 @@ const ContactSubmissions = () => {
 
       if (error) throw error;
 
-      // Cast the data to ContactFormSubmission[] type to fix TypeScript error
       setSubmissions(data as unknown as ContactFormSubmission[]);
     } catch (error: any) {
       toast({
@@ -74,31 +81,84 @@ const ContactSubmissions = () => {
     }
   };
 
+  const updateSubmissionStatus = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('contact_form_submissions')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Mise à jour locale
+      setSubmissions(prev => 
+        prev.map(sub => 
+          sub.id === id 
+            ? { ...sub, status: newStatus } 
+            : sub
+        )
+      );
+
+      toast({
+        title: "Statut mis à jour",
+        description: "Le statut de la soumission a été modifié avec succès",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de mettre à jour le statut: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteSubmission = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('contact_form_submissions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Mise à jour locale
+      setSubmissions(prev => prev.filter(sub => sub.id !== id));
+
+      toast({
+        title: "Soumission supprimée",
+        description: "La soumission a été supprimée avec succès",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: `Impossible de supprimer la soumission: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'PPP à HH:mm', { locale: fr });
   };
 
   const exportToCSV = () => {
     try {
-      // Format submissions data for CSV
-      const headers = ['Nom', 'Email', 'Téléphone', 'Message', 'Date'];
+      const headers = ['Nom', 'Email', 'Téléphone', 'Message', 'État', 'Date'];
       const csvData = submissions.map(sub => [
         sub.full_name,
         sub.email,
         sub.phone,
         sub.message || '',
+        sub.status || 'nouveau',
         format(new Date(sub.created_at), 'yyyy-MM-dd HH:mm:ss')
       ]);
       
-      // Add headers
       csvData.unshift(headers);
       
-      // Convert to CSV format
       const csvContent = csvData.map(row => 
         row.map(cell => `"${cell.replace(/"/g, '""')}"`).join(',')
       ).join('\n');
       
-      // Create blob and download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
@@ -120,6 +180,21 @@ const ContactSubmissions = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusColors = {
+      'nouveau': 'bg-blue-100 text-blue-800',
+      'sérieux': 'bg-green-100 text-green-800',
+      'non sérieux': 'bg-red-100 text-red-800',
+      'contacté': 'bg-yellow-100 text-yellow-800'
+    };
+    
+    return (
+      <span className={`px-2 py-1 text-xs rounded-full ${statusColors[status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'}`}>
+        {status || 'nouveau'}
+      </span>
+    );
   };
 
   if (!user || !isAdmin) {
@@ -156,17 +231,18 @@ const ContactSubmissions = () => {
                 <TableHead>Nom</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Téléphone</TableHead>
+                <TableHead>État</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">Chargement...</TableCell>
+                  <TableCell colSpan={6} className="text-center">Chargement...</TableCell>
                 </TableRow>
               ) : submissions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">Aucune demande de contact trouvée</TableCell>
+                  <TableCell colSpan={6} className="text-center">Aucune demande de contact trouvée</TableCell>
                 </TableRow>
               ) : (
                 submissions.map((submission) => (
@@ -175,18 +251,43 @@ const ContactSubmissions = () => {
                     <TableCell className="font-medium">{submission.full_name}</TableCell>
                     <TableCell>{submission.email}</TableCell>
                     <TableCell>{submission.phone}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedSubmission(submission);
-                          setDetailDialogOpen(true);
-                        }}
+                    <TableCell>
+                      <Select
+                        value={submission.status || 'nouveau'}
+                        onValueChange={(value) => updateSubmissionStatus(submission.id, value)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Voir
-                      </Button>
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="nouveau">nouveau</SelectItem>
+                          <SelectItem value="sérieux">sérieux</SelectItem>
+                          <SelectItem value="non sérieux">non sérieux</SelectItem>
+                          <SelectItem value="contacté">contacté</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSubmission(submission);
+                            setDetailDialogOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => deleteSubmission(submission.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -220,6 +321,11 @@ const ContactSubmissions = () => {
                 <div>
                   <h4 className="font-medium text-sm">Téléphone</h4>
                   <p>{selectedSubmission.phone}</p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-sm">État</h4>
+                  {getStatusBadge(selectedSubmission.status || 'nouveau')}
                 </div>
                 
                 <div>

@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      banner_accordion: {
+        Row: {
+          actif: boolean | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image: string
+          lien_bouton: string | null
+          ordre: number | null
+          texte_bouton: string | null
+          titre: string
+          updated_at: string | null
+        }
+        Insert: {
+          actif?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image: string
+          lien_bouton?: string | null
+          ordre?: number | null
+          texte_bouton?: string | null
+          titre: string
+          updated_at?: string | null
+        }
+        Update: {
+          actif?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image?: string
+          lien_bouton?: string | null
+          ordre?: number | null
+          texte_bouton?: string | null
+          titre?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       banners: {
         Row: {
           active: boolean | null
@@ -137,6 +176,7 @@ export type Database = {
           id: string
           message: string | null
           phone: string
+          status: string | null
         }
         Insert: {
           created_at?: string
@@ -145,6 +185,7 @@ export type Database = {
           id?: string
           message?: string | null
           phone: string
+          status?: string | null
         }
         Update: {
           created_at?: string
@@ -153,6 +194,7 @@ export type Database = {
           id?: string
           message?: string | null
           phone?: string
+          status?: string | null
         }
         Relationships: []
       }
@@ -411,6 +453,7 @@ export type Database = {
           created_at: string
           description: string | null
           featured: boolean | null
+          hidden: boolean | null
           id: string
           main_image_url: string | null
           name: string
@@ -426,6 +469,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean | null
+          hidden?: boolean | null
           id?: string
           main_image_url?: string | null
           name: string
@@ -441,6 +485,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           featured?: boolean | null
+          hidden?: boolean | null
           id?: string
           main_image_url?: string | null
           name?: string

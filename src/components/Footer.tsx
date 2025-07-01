@@ -83,7 +83,7 @@ const Footer = () => {
               <li>
                 <Link 
                   to="/verify-product" 
-                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors font-bold"
                 >
                   Vérification du numéro de série
                 </Link>
@@ -99,9 +99,9 @@ const Footer = () => {
               <li>
                 <Link 
                   to="/training" 
-                  className="text-gray-600 hover:text-sonoff-blue transition-colors"
+                  className="text-gray-600 hover:text-sonoff-blue transition-colors font-bold"
                 >
-                  Inscription à une formation
+                  Inscription à une <span style={{ color: '#007bff' }}>formation</span>
                 </Link>
               </li>
             </ul>

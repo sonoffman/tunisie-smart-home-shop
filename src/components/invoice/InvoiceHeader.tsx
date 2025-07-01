@@ -6,12 +6,14 @@ import { Input } from '@/components/ui/input';
 interface InvoiceHeaderProps {
   invoiceNumber: string;
   invoiceDate: string;
+  onNumberChange: (number: string) => void;
   onDateChange: (date: string) => void;
 }
 
 const InvoiceHeader: React.FC<InvoiceHeaderProps> = ({
   invoiceNumber,
   invoiceDate,
+  onNumberChange,
   onDateChange,
 }) => {
   return (
@@ -21,8 +23,8 @@ const InvoiceHeader: React.FC<InvoiceHeaderProps> = ({
         <Input
           id="invoice-number"
           value={invoiceNumber}
-          readOnly
-          disabled
+          onChange={(e) => onNumberChange(e.target.value)}
+          placeholder="Exemple: INV-2025-001"
         />
       </div>
       <div>

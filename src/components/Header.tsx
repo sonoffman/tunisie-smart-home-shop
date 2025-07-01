@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserMenu } from './UserMenu';
+import Navigation from './Navigation';
 import { useCart } from '@/contexts/CartContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -70,6 +71,9 @@ const Header = () => {
           <Link to="/" className={`font-bold text-sonoff-blue ${isMobile ? 'text-lg' : 'text-2xl'}`}>
             SONOFF Tunisie
           </Link>
+
+          {/* Navigation - Desktop only */}
+          <Navigation />
 
           {/* Search Bar - Hidden on Mobile */}
           <form onSubmit={handleSearch} className="hidden md:flex relative w-1/3">
