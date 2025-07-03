@@ -83,6 +83,8 @@ const AppRoutes = () => {
       <Route path="/admin/factures" element={<InvoiceManagement />} />
       <Route path="/admin/invoices/:id" element={<InvoiceDetail />} />
       <Route path="/admin/factures/:id" element={<InvoiceDetail />} />
+      {/* Fix: Add missing route for /admin/invoice/:id */}
+      <Route path="/admin/invoice/:id" element={<InvoiceDetail />} />
       <Route path="/admin/contact-submissions" element={<ContactSubmissions />} />
       <Route path="/admin/contacts" element={<ContactSubmissions />} />
       <Route path="/admin/banners" element={<BannerManagement />} />

@@ -17,6 +17,7 @@ interface OrdersTableProps {
   formatCurrency: (amount: number) => string;
   getStatusLabel: (status: string) => string;
   getStatusColor: (status: string) => string;
+  onGenerateInvoice: (orderId: string) => void;
 }
 
 const OrdersTable = ({
@@ -26,12 +27,9 @@ const OrdersTable = ({
   formatCurrency,
   getStatusLabel,
   getStatusColor,
+  onGenerateInvoice,
 }: OrdersTableProps) => {
   const navigate = useNavigate();
-
-  const handleRowClick = (orderId: string) => {
-    navigate(`/admin/invoices/${orderId}`);
-  };
 
   return (
     <Table>
@@ -60,7 +58,6 @@ const OrdersTable = ({
             <TableRow 
               key={order.id} 
               className="cursor-pointer hover:bg-gray-50"
-              onClick={() => handleRowClick(order.id)}
             >
               <TableCell>{formatDate(order.created_at)}</TableCell>
               <TableCell className="font-medium">{order.customer_name}</TableCell>
@@ -80,7 +77,7 @@ const OrdersTable = ({
                         size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/admin/invoices/${order.id}`);
+                          onGenerateInvoice(order.id);
                         }}
                       >
                         <FileText className="h-4 w-4" />
