@@ -29,24 +29,30 @@ const DynamicImageAccordion = () => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
-        console.log('Fetching banners...');
+        console.log('Fetching banners from banner_accordion table...');
         const { data, error } = await supabase
           .from('banner_accordion')
           .select('*')
           .eq('actif', true)
-          .order('ordre');
+          .order('ordre', { ascending: true });
 
         if (error) {
           console.error('Error fetching banners:', error);
           throw error;
         }
         
-        console.log('Banners fetched:', data);
-        if (data) {
+        console.log('Banners fetched successfully:', data?.length || 0, 'active banners found');
+        console.log('Banner data:', data);
+        
+        if (data && data.length > 0) {
           setBanners(data);
+        } else {
+          console.log('No active banners found in database');
+          setBanners([]);
         }
       } catch (error) {
         console.error('Error fetching banners:', error);
+        setBanners([]);
       } finally {
         setLoading(false);
       }
@@ -56,7 +62,7 @@ const DynamicImageAccordion = () => {
 
     // Set up real-time subscription for banner updates
     const channel = supabase
-      .channel('banner_changes')
+      .channel('banner_accordion_changes')
       .on(
         'postgres_changes',
         {
@@ -66,18 +72,23 @@ const DynamicImageAccordion = () => {
         },
         (payload) => {
           console.log('Banner change detected:', payload);
-          fetchBanners();
+          fetchBanners(); // Refresh banners when changes occur
         }
       )
       .subscribe();
 
     return () => {
+      console.log('Cleaning up banner subscription');
       supabase.removeChannel(channel);
     };
   }, []);
 
   if (loading) {
-    return <div className="h-96 bg-gray-200 animate-pulse rounded-lg"></div>;
+    return (
+      <div className="h-96 bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">
+        <p className="text-gray-500">Chargement des bannières...</p>
+      </div>
+    );
   }
 
   if (banners.length === 0) {
@@ -88,11 +99,13 @@ const DynamicImageAccordion = () => {
     );
   }
 
+  console.log('Rendering', banners.length, 'banners');
+
   return (
     <div className="relative w-full mb-8">
       <Carousel className="w-full" opts={{ align: "start", loop: true }}>
         <CarouselContent>
-          {banners.map((banner) => (
+          {banners.map((banner, index) => (
             <CarouselItem key={banner.id}>
               <div 
                 className="relative w-full h-96 overflow-hidden rounded-lg shadow-lg"
@@ -123,17 +136,33 @@ const DynamicImageAccordion = () => {
                     )}
                   </div>
                 </div>
+                {/* Debug info in development */}
+                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+                  {index + 1}/{banners.length}
+                </div>
               </div>
             </CarouselItem>
           ))}
         </CarouselContent>
         {banners.length > 1 && (
           <>
-            <CarouselPrevious />
-            <CarouselNext />
+            <CarouselPrevious className="left-4" />
+            <CarouselNext className="right-4" />
           </>
         )}
       </Carousel>
+      
+      {/* Indicators */}
+      {banners.length > 1 && (
+        <div className="flex justify-center mt-4 space-x-2">
+          {banners.map((_, index) => (
+            <div
+              key={index}
+              className="w-2 h-2 rounded-full bg-gray-300"
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

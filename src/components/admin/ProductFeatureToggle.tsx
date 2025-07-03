@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { Check, X, Eye, EyeOff } from 'lucide-react';
+import { Star, Eye, EyeOff, StarOff } from 'lucide-react';
 
 interface ProductFeatureToggleProps {
   productId: string;
@@ -22,6 +22,8 @@ const ProductFeatureToggle: React.FC<ProductFeatureToggleProps> = ({
   const { toast } = useToast();
 
   const toggleFeatured = async () => {
+    if (updating) return;
+    
     setUpdating(true);
     try {
       console.log('Toggling featured status for product:', productId, 'from', featured, 'to', !featured);
@@ -55,6 +57,8 @@ const ProductFeatureToggle: React.FC<ProductFeatureToggleProps> = ({
   };
 
   const toggleHidden = async () => {
+    if (updating) return;
+    
     setUpdating(true);
     try {
       console.log('Toggling hidden status for product:', productId, 'from', hidden, 'to', !hidden);
@@ -71,7 +75,7 @@ const ProductFeatureToggle: React.FC<ProductFeatureToggleProps> = ({
 
       toast({
         title: "Succès",
-        description: `Produit ${!hidden ? 'masqué' : 'affiché'}`,
+        description: `Produit ${!hidden ? 'masqué' : 'rendu visible'}`,
       });
       
       onUpdate();
@@ -88,16 +92,18 @@ const ProductFeatureToggle: React.FC<ProductFeatureToggleProps> = ({
   };
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 items-center">
       <Button
         variant="ghost"
         size="sm"
         onClick={toggleFeatured}
         disabled={updating}
-        className={`p-1 hover:bg-gray-100 ${featured ? 'text-green-600' : 'text-gray-400'}`}
+        className={`p-2 hover:bg-gray-100 transition-colors ${
+          featured ? 'text-yellow-600 bg-yellow-50' : 'text-gray-400'
+        }`}
         title={featured ? 'Retirer de la mise en avant' : 'Mettre en avant'}
       >
-        {featured ? <Check size={16} /> : <X size={16} />}
+        {featured ? <Star size={16} fill="currentColor" /> : <StarOff size={16} />}
       </Button>
       
       <Button
@@ -105,11 +111,17 @@ const ProductFeatureToggle: React.FC<ProductFeatureToggleProps> = ({
         size="sm"
         onClick={toggleHidden}
         disabled={updating}
-        className={`p-1 hover:bg-gray-100 ${hidden ? 'text-red-600' : 'text-green-600'}`}
-        title={hidden ? 'Afficher le produit' : 'Masquer le produit'}
+        className={`p-2 hover:bg-gray-100 transition-colors ${
+          hidden ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'
+        }`}
+        title={hidden ? 'Rendre visible' : 'Masquer le produit'}
       >
         {hidden ? <EyeOff size={16} /> : <Eye size={16} />}
       </Button>
+      
+      {updating && (
+        <span className="text-xs text-gray-500">Mise à jour...</span>
+      )}
     </div>
   );
 };

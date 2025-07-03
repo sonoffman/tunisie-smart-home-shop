@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from '@/pages/Index';
@@ -47,7 +48,9 @@ const AppRoutes = () => {
       <Route path="/cart" element={<CartPage />} />
       <Route path="/panier" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/commande" element={<CheckoutPage />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/profil" element={<Profile />} />
       <Route path="/verify-product" element={<VerifyProduct />} />
       <Route path="/verifier-produit" element={<VerifyProduct />} />
       <Route path="/blog" element={<Blog />} />
@@ -55,23 +58,35 @@ const AppRoutes = () => {
       <Route path="/training" element={<TrainingPage />} />
       <Route path="/formation" element={<TrainingPage />} />
       <Route path="/search" element={<SearchResults />} />
+      <Route path="/recherche" element={<SearchResults />} />
       
       {/* Admin routes */}
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/products" element={<ProductManagement />} />
+      <Route path="/admin/produits" element={<ProductManagement />} />
       <Route path="/admin/categories" element={<CategoryManagement />} />
       <Route path="/admin/orders" element={<OrderManagement />} />
+      <Route path="/admin/commandes" element={<OrderManagement />} />
       <Route path="/admin/users" element={<UserManagement />} />
+      <Route path="/admin/utilisateurs" element={<UserManagement />} />
       <Route path="/admin/blog" element={<BlogManagement />} />
       <Route path="/admin/cms" element={<CMSManagement />} />
       <Route path="/admin/serial-numbers" element={<SerialNumberManagement />} />
+      <Route path="/admin/numeros-serie" element={<SerialNumberManagement />} />
       <Route path="/admin/training" element={<TrainingManagement />} />
+      <Route path="/admin/formation" element={<TrainingManagement />} />
       <Route path="/admin/sales" element={<SalesManagement />} />
+      <Route path="/admin/ventes" element={<SalesManagement />} />
       <Route path="/admin/invoices/new" element={<InvoiceGenerator />} />
+      <Route path="/admin/factures/nouvelle" element={<InvoiceGenerator />} />
       <Route path="/admin/invoices" element={<InvoiceManagement />} />
+      <Route path="/admin/factures" element={<InvoiceManagement />} />
       <Route path="/admin/invoices/:id" element={<InvoiceDetail />} />
+      <Route path="/admin/factures/:id" element={<InvoiceDetail />} />
       <Route path="/admin/contact-submissions" element={<ContactSubmissions />} />
+      <Route path="/admin/contacts" element={<ContactSubmissions />} />
       <Route path="/admin/banners" element={<BannerManagement />} />
+      <Route path="/admin/bannieres" element={<BannerManagement />} />
       <Route path="/admin/route-audit" element={<RouteAudit />} />
       
       {/* CMS Pages */}
@@ -83,6 +98,7 @@ const AppRoutes = () => {
       <Route path="/confidentialite" element={<CMSPage />} />
       <Route path="/shipping" element={<CMSPage />} />
       <Route path="/livraison" element={<CMSPage />} />
+      <Route path="/page/:slug" element={<CMSPage />} />
       
       {/* Catch-all route for 404 */}
       <Route path="*" element={<NotFound />} />

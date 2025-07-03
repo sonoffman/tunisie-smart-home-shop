@@ -76,10 +76,17 @@ const InvoiceDetail = () => {
 
       if (invoiceError) {
         console.error('Invoice fetch error:', invoiceError);
-        throw invoiceError;
+        toast({
+          title: "Erreur de base de données",
+          description: `Erreur lors du chargement: ${invoiceError.message}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
       if (!invoiceData) {
+        console.log('No invoice found with ID:', id);
         toast({
           title: "Facture introuvable",
           description: "Aucune facture trouvée avec cet identifiant",
@@ -89,11 +96,12 @@ const InvoiceDetail = () => {
         return;
       }
       
-      console.log('Invoice data fetched:', invoiceData);
+      console.log('Invoice data fetched successfully:', invoiceData);
       setInvoice(invoiceData);
 
       // Fetch customer if invoice exists
       if (invoiceData?.customer_id) {
+        console.log('Fetching customer with ID:', invoiceData.customer_id);
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
           .select('*')
@@ -102,18 +110,23 @@ const InvoiceDetail = () => {
 
         if (customerError) {
           console.error('Customer fetch error:', customerError);
-          throw customerError;
-        }
-        
-        if (customerData) {
+          toast({
+            title: "Erreur client",
+            description: `Impossible de charger les données client: ${customerError.message}`,
+            variant: "destructive",
+          });
+        } else if (customerData) {
+          console.log('Customer data fetched successfully:', customerData);
           setCustomer(customerData);
+        } else {
+          console.log('No customer found with ID:', invoiceData.customer_id);
         }
       }
     } catch (error: any) {
-      console.error('Error fetching invoice:', error);
+      console.error('Unexpected error fetching invoice:', error);
       toast({
-        title: "Erreur",
-        description: `Impossible de charger la facture: ${error.message}`,
+        title: "Erreur inattendue",
+        description: `Une erreur inattendue s'est produite: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -123,16 +136,22 @@ const InvoiceDetail = () => {
 
   // Helper function to safely convert Json to InvoiceItem[]
   const parseInvoiceItems = (items: Json): InvoiceItem[] => {
-    if (!items || !Array.isArray(items)) {
+    if (!items) {
+      console.log('No items data provided');
+      return [];
+    }
+    
+    if (!Array.isArray(items)) {
+      console.log('Items is not an array:', typeof items, items);
       return [];
     }
     
     return items.map((item: any, index: number) => ({
       id: item.id || `item-${index}`,
-      description: item.name || item.description || '',
-      quantity: item.quantity || 0,
-      unitPrice: item.price || item.unitPrice || 0,
-      total: item.total || (item.quantity * (item.price || item.unitPrice)) || 0
+      description: item.name || item.description || 'Article sans nom',
+      quantity: Number(item.quantity) || 0,
+      unitPrice: Number(item.price || item.unitPrice) || 0,
+      total: Number(item.total) || (Number(item.quantity) * Number(item.price || item.unitPrice)) || 0
     }));
   };
 
@@ -166,7 +185,7 @@ const InvoiceDetail = () => {
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast({
-        title: "Erreur",
+        title: "Erreur PDF",
         description: "Impossible de générer le PDF",
         variant: "destructive",
       });
@@ -203,7 +222,7 @@ const InvoiceDetail = () => {
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast({
-        title: "Erreur",
+        title: "Erreur téléchargement",
         description: "Impossible de télécharger le PDF",
         variant: "destructive",
       });
