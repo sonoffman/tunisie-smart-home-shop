@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
 import { Json } from '@/integrations/supabase/types';
+import { InvoiceItem } from '@/types/supabase';
 
 interface Invoice {
   id: string;
@@ -71,22 +72,21 @@ const InvoiceDetail = () => {
         .from('invoices')
         .select('*')
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
       if (invoiceError) {
         console.error('Invoice fetch error:', invoiceError);
-        
-        if (invoiceError.code === 'PGRST116') {
-          toast({
-            title: "Facture introuvable",
-            description: "Aucune facture trouvée avec cet identifiant",
-            variant: "destructive",
-          });
-          setLoading(false);
-          return;
-        }
-        
         throw invoiceError;
+      }
+
+      if (!invoiceData) {
+        toast({
+          title: "Facture introuvable",
+          description: "Aucune facture trouvée avec cet identifiant",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
       
       console.log('Invoice data fetched:', invoiceData);
@@ -98,14 +98,14 @@ const InvoiceDetail = () => {
           .from('customers')
           .select('*')
           .eq('id', invoiceData.customer_id)
-          .single();
+          .maybeSingle();
 
         if (customerError) {
           console.error('Customer fetch error:', customerError);
-          if (customerError.code !== 'PGRST116') {
-            throw customerError;
-          }
-        } else {
+          throw customerError;
+        }
+        
+        if (customerData) {
           setCustomer(customerData);
         }
       }
@@ -121,6 +121,21 @@ const InvoiceDetail = () => {
     }
   };
 
+  // Helper function to safely convert Json to InvoiceItem[]
+  const parseInvoiceItems = (items: Json): InvoiceItem[] => {
+    if (!items || !Array.isArray(items)) {
+      return [];
+    }
+    
+    return items.map((item: any, index: number) => ({
+      id: item.id || `item-${index}`,
+      description: item.name || item.description || '',
+      quantity: item.quantity || 0,
+      unitPrice: item.price || item.unitPrice || 0,
+      total: item.total || (item.quantity * (item.price || item.unitPrice)) || 0
+    }));
+  };
+
   const handlePreviewPdf = () => {
     if (!invoice || !customer) {
       toast({
@@ -132,7 +147,7 @@ const InvoiceDetail = () => {
     }
 
     try {
-      const items = Array.isArray(invoice.items) ? invoice.items : [];
+      const items = parseInvoiceItems(invoice.items);
       
       const pdf = generateInvoicePdf({
         invoiceNumber: invoice.invoice_number,
@@ -169,7 +184,7 @@ const InvoiceDetail = () => {
     }
 
     try {
-      const items = Array.isArray(invoice.items) ? invoice.items : [];
+      const items = parseInvoiceItems(invoice.items);
       
       const pdf = generateInvoicePdf({
         invoiceNumber: invoice.invoice_number,
@@ -225,7 +240,7 @@ const InvoiceDetail = () => {
   }
 
   // Parse items safely from Json type
-  const items = Array.isArray(invoice.items) ? invoice.items : [];
+  const items = parseInvoiceItems(invoice.items);
 
   return (
     <Layout>
@@ -318,12 +333,12 @@ const InvoiceDetail = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {items.map((item: any, index: number) => (
-                      <tr key={index} className="border-b">
-                        <td className="p-2">{item.name || item.description}</td>
+                    {items.map((item: InvoiceItem, index: number) => (
+                      <tr key={item.id || index} className="border-b">
+                        <td className="p-2">{item.description}</td>
                         <td className="text-right p-2">{item.quantity}</td>
-                        <td className="text-right p-2">{item.price?.toFixed(2) || item.unitPrice?.toFixed(2)} DT</td>
-                        <td className="text-right p-2">{((item.quantity * (item.price || item.unitPrice)) || item.total)?.toFixed(2)} DT</td>
+                        <td className="text-right p-2">{item.unitPrice.toFixed(2)} DT</td>
+                        <td className="text-right p-2">{item.total.toFixed(2)} DT</td>
                       </tr>
                     ))}
                   </tbody>
