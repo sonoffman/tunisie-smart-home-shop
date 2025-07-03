@@ -79,6 +79,132 @@ const InvoiceManagement = () => {
     }
   };
 
+  const handleGenerateInvoice = async (orderId: string) => {
+    try {
+      // Find the order to convert to invoice
+      const order = orders.find(o => o.id === orderId);
+      if (!order) {
+        toast({
+          title: "Erreur",
+          description: "Commande introuvable",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch order items
+      const { data: orderItems, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*')
+        .eq('order_id', orderId);
+
+      if (itemsError) throw itemsError;
+
+      if (!orderItems || orderItems.length === 0) {
+        toast({
+          title: "Erreur",
+          description: "Aucun article trouvé pour cette commande",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if customer exists, if not create one
+      let customer;
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('phone', order.customer_phone)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        customer = existingCustomer;
+      } else {
+        // Create new customer
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            name: order.customer_name,
+            phone: order.customer_phone,
+            address: order.customer_address,
+          })
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+        customer = newCustomer;
+      }
+
+      // Generate invoice number
+      const { data: lastInvoice } = await supabase
+        .from('invoices')
+        .select('invoice_number')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      let nextNumber = 1;
+      if (lastInvoice && lastInvoice.length > 0) {
+        const lastNumber = lastInvoice[0].invoice_number;
+        const match = lastNumber.match(/(\d+)$/);
+        if (match) {
+          nextNumber = parseInt(match[1]) + 1;
+        }
+      }
+
+      const currentYear = new Date().getFullYear();
+      const invoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(3, '0')}`;
+
+      // Convert order items to invoice items format
+      const invoiceItems = orderItems.map(item => ({
+        id: item.id,
+        description: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        total: item.quantity * item.price
+      }));
+
+      // Calculate totals
+      const subtotalHT = invoiceItems.reduce((sum, item) => sum + item.total, 0);
+      const tva = subtotalHT * 0.19; // 19% TVA
+      const timbreFiscal = 0.6;
+      const totalTTC = subtotalHT + tva + timbreFiscal;
+
+      // Create invoice
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          customer_id: customer.id,
+          invoice_date: new Date().toISOString().split('T')[0],
+          items: invoiceItems,
+          subtotal_ht: subtotalHT,
+          tva: tva,
+          timbre_fiscal: timbreFiscal,
+          total_ttc: totalTTC,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      toast({
+        title: "Succès",
+        description: `Facture ${invoiceNumber} créée avec succès`,
+      });
+
+      // Navigate to the invoice detail page
+      navigate(`/admin/invoices/${invoice.id}`);
+    } catch (error: any) {
+      console.error('Error generating invoice:', error);
+      toast({
+        title: "Erreur",
+        description: `Impossible de générer la facture: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -180,6 +306,7 @@ const InvoiceManagement = () => {
             formatCurrency={formatCurrency}
             getStatusLabel={getStatusLabel}
             getStatusColor={getStatusColor}
+            onGenerateInvoice={handleGenerateInvoice}
           />
         </div>
 
