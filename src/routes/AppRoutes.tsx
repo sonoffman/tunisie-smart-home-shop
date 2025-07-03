@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import HomePage from '@/pages/Index';
@@ -32,21 +31,29 @@ import InvoiceManagement from '@/pages/admin/InvoiceManagement';
 import InvoiceDetail from '@/pages/admin/InvoiceDetail';
 import ContactSubmissions from '@/pages/admin/ContactSubmissions';
 import BannerManagement from '@/pages/admin/BannerManagement';
+import RouteAudit from '@/components/admin/RouteAudit';
 
 const AppRoutes = () => {
   return (
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<HomePage />} />
       <Route path="/products" element={<AllProducts />} />
+      <Route path="/produits" element={<AllProducts />} />
       <Route path="/product/:slug" element={<ProductDetail />} />
+      <Route path="/produit/:slug" element={<ProductDetail />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
+      <Route path="/categorie/:slug" element={<CategoryPage />} />
       <Route path="/cart" element={<CartPage />} />
+      <Route path="/panier" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/verify-product" element={<VerifyProduct />} />
+      <Route path="/verifier-produit" element={<VerifyProduct />} />
       <Route path="/blog" element={<Blog />} />
       <Route path="/blog/:slug" element={<BlogPost />} />
       <Route path="/training" element={<TrainingPage />} />
+      <Route path="/formation" element={<TrainingPage />} />
       <Route path="/search" element={<SearchResults />} />
       
       {/* Admin routes */}
@@ -65,13 +72,19 @@ const AppRoutes = () => {
       <Route path="/admin/invoices/:id" element={<InvoiceDetail />} />
       <Route path="/admin/contact-submissions" element={<ContactSubmissions />} />
       <Route path="/admin/banners" element={<BannerManagement />} />
+      <Route path="/admin/route-audit" element={<RouteAudit />} />
       
       {/* CMS Pages */}
       <Route path="/about" element={<CMSPage />} />
+      <Route path="/a-propos" element={<CMSPage />} />
       <Route path="/terms" element={<CMSPage />} />
+      <Route path="/conditions" element={<CMSPage />} />
       <Route path="/privacy" element={<CMSPage />} />
+      <Route path="/confidentialite" element={<CMSPage />} />
       <Route path="/shipping" element={<CMSPage />} />
+      <Route path="/livraison" element={<CMSPage />} />
       
+      {/* Catch-all route for 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

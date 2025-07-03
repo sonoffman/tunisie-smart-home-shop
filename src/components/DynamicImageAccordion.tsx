@@ -29,14 +29,19 @@ const DynamicImageAccordion = () => {
   useEffect(() => {
     const fetchBanners = async () => {
       try {
+        console.log('Fetching banners...');
         const { data, error } = await supabase
           .from('banner_accordion')
           .select('*')
           .eq('actif', true)
           .order('ordre');
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching banners:', error);
+          throw error;
+        }
         
+        console.log('Banners fetched:', data);
         if (data) {
           setBanners(data);
         }
@@ -59,7 +64,8 @@ const DynamicImageAccordion = () => {
           schema: 'public',
           table: 'banner_accordion'
         },
-        () => {
+        (payload) => {
+          console.log('Banner change detected:', payload);
           fetchBanners();
         }
       )
@@ -75,12 +81,16 @@ const DynamicImageAccordion = () => {
   }
 
   if (banners.length === 0) {
-    return null;
+    return (
+      <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
+        <p className="text-gray-500">Aucune bannière active trouvée</p>
+      </div>
+    );
   }
 
   return (
-    <div className="relative w-full">
-      <Carousel className="w-full">
+    <div className="relative w-full mb-8">
+      <Carousel className="w-full" opts={{ align: "start", loop: true }}>
         <CarouselContent>
           {banners.map((banner) => (
             <CarouselItem key={banner.id}>
@@ -100,7 +110,7 @@ const DynamicImageAccordion = () => {
                     <p className="text-lg md:text-xl mb-8 opacity-90">
                       {banner.description}
                     </p>
-                    {banner.lien_bouton && (
+                    {banner.lien_bouton && banner.texte_bouton && (
                       <Button 
                         asChild 
                         size="lg" 
@@ -117,8 +127,12 @@ const DynamicImageAccordion = () => {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
+        {banners.length > 1 && (
+          <>
+            <CarouselPrevious />
+            <CarouselNext />
+          </>
+        )}
       </Carousel>
     </div>
   );

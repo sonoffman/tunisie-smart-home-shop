@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
 import { Json } from '@/integrations/supabase/types';
 
 interface Invoice {
@@ -63,37 +64,50 @@ const InvoiceDetail = () => {
     
     setLoading(true);
     try {
-      // Fetch invoice using maybeSingle to handle cases where no invoice exists
+      console.log('Fetching invoice with ID:', id);
+      
+      // Fetch invoice with proper error handling
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
         .eq('id', id)
-        .maybeSingle();
+        .single();
 
-      if (invoiceError) throw invoiceError;
-      
-      if (!invoiceData) {
-        toast({
-          title: "Facture introuvable",
-          description: "Aucune facture trouvée avec cet identifiant",
-          variant: "destructive",
-        });
-        setLoading(false);
-        return;
+      if (invoiceError) {
+        console.error('Invoice fetch error:', invoiceError);
+        
+        if (invoiceError.code === 'PGRST116') {
+          toast({
+            title: "Facture introuvable",
+            description: "Aucune facture trouvée avec cet identifiant",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        
+        throw invoiceError;
       }
       
+      console.log('Invoice data fetched:', invoiceData);
       setInvoice(invoiceData);
 
-      // Fetch customer
+      // Fetch customer if invoice exists
       if (invoiceData?.customer_id) {
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
           .select('*')
           .eq('id', invoiceData.customer_id)
-          .maybeSingle();
+          .single();
 
-        if (customerError) throw customerError;
-        setCustomer(customerData);
+        if (customerError) {
+          console.error('Customer fetch error:', customerError);
+          if (customerError.code !== 'PGRST116') {
+            throw customerError;
+          }
+        } else {
+          setCustomer(customerData);
+        }
       }
     } catch (error: any) {
       console.error('Error fetching invoice:', error);
@@ -104,6 +118,80 @@ const InvoiceDetail = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePreviewPdf = () => {
+    if (!invoice || !customer) {
+      toast({
+        title: "Erreur",
+        description: "Données de facture incomplètes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const items = Array.isArray(invoice.items) ? invoice.items : [];
+      
+      const pdf = generateInvoicePdf({
+        invoiceNumber: invoice.invoice_number,
+        invoiceDate: invoice.invoice_date,
+        customer: customer,
+        items: items,
+        taxes: {
+          subtotalHT: invoice.subtotal_ht,
+          tva: invoice.tva,
+          timbreFiscal: invoice.timbre_fiscal,
+          totalTTC: invoice.total_ttc
+        }
+      });
+
+      pdf.output('dataurlnewwindow');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadPdf = () => {
+    if (!invoice || !customer) {
+      toast({
+        title: "Erreur",
+        description: "Données de facture incomplètes",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const items = Array.isArray(invoice.items) ? invoice.items : [];
+      
+      const pdf = generateInvoicePdf({
+        invoiceNumber: invoice.invoice_number,
+        invoiceDate: invoice.invoice_date,
+        customer: customer,
+        items: items,
+        taxes: {
+          subtotalHT: invoice.subtotal_ht,
+          tva: invoice.tva,
+          timbreFiscal: invoice.timbre_fiscal,
+          totalTTC: invoice.total_ttc
+        }
+      });
+
+      pdf.save(`facture-${invoice.invoice_number}.pdf`);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger le PDF",
+        variant: "destructive",
+      });
     }
   };
 
@@ -157,11 +245,11 @@ const InvoiceDetail = () => {
             </h1>
           </div>
           <div className="space-x-2">
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={handlePreviewPdf}>
               <Eye className="h-4 w-4" />
               Aperçu
             </Button>
-            <Button className="flex items-center gap-2">
+            <Button className="flex items-center gap-2" onClick={handleDownloadPdf}>
               <Download className="h-4 w-4" />
               Télécharger PDF
             </Button>
