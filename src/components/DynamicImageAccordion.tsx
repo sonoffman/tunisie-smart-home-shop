@@ -10,6 +10,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import { type CarouselApi } from '@/components/ui/carousel';
 
 interface BannerAccordion {
   id: string;
@@ -25,6 +26,8 @@ interface BannerAccordion {
 const DynamicImageAccordion = () => {
   const [banners, setBanners] = useState<BannerAccordion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [api, setApi] = useState<CarouselApi>();
+  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -72,7 +75,7 @@ const DynamicImageAccordion = () => {
         },
         (payload) => {
           console.log('Banner change detected:', payload);
-          fetchBanners(); // Refresh banners when changes occur
+          fetchBanners();
         }
       )
       .subscribe();
@@ -82,6 +85,27 @@ const DynamicImageAccordion = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    if (!api) {
+      return;
+    }
+
+    setCurrent(api.selectedScrollSnap());
+
+    api.on("select", () => {
+      setCurrent(api.selectedScrollSnap());
+    });
+
+    // Auto-scroll every 3 seconds
+    const interval = setInterval(() => {
+      if (api && banners.length > 1) {
+        api.scrollNext();
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [api, banners.length]);
 
   if (loading) {
     return (
@@ -103,12 +127,16 @@ const DynamicImageAccordion = () => {
 
   return (
     <div className="relative w-full mb-8">
-      <Carousel className="w-full" opts={{ align: "start", loop: true }}>
+      <Carousel 
+        className="w-full" 
+        opts={{ align: "start", loop: true }}
+        setApi={setApi}
+      >
         <CarouselContent>
           {banners.map((banner, index) => (
             <CarouselItem key={banner.id}>
               <div 
-                className="relative w-full h-96 overflow-hidden rounded-lg shadow-lg"
+                className="relative w-full h-96 overflow-hidden rounded-lg shadow-lg transition-all duration-500"
                 style={{
                   backgroundImage: `url(${banner.image})`,
                   backgroundSize: 'cover',
@@ -116,18 +144,18 @@ const DynamicImageAccordion = () => {
                 }}
               >
                 <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-                  <div className="text-center text-white max-w-2xl px-4">
-                    <h1 className="text-4xl md:text-6xl font-bold mb-4">
+                  <div className="text-center text-white max-w-2xl px-4 transform transition-transform duration-500">
+                    <h1 className="text-4xl md:text-6xl font-bold mb-4 animate-fade-in">
                       {banner.titre}
                     </h1>
-                    <p className="text-lg md:text-xl mb-8 opacity-90">
+                    <p className="text-lg md:text-xl mb-8 opacity-90 animate-fade-in-delay">
                       {banner.description}
                     </p>
                     {banner.lien_bouton && banner.texte_bouton && (
                       <Button 
                         asChild 
                         size="lg" 
-                        className="bg-sonoff-orange hover:bg-sonoff-orange/90 text-white px-8 py-3 text-lg"
+                        className="bg-sonoff-orange hover:bg-sonoff-orange/90 text-white px-8 py-3 text-lg transform hover:scale-105 transition-all duration-300"
                       >
                         <Link to={banner.lien_bouton}>
                           {banner.texte_bouton}
@@ -135,10 +163,6 @@ const DynamicImageAccordion = () => {
                       </Button>
                     )}
                   </div>
-                </div>
-                {/* Debug info in development */}
-                <div className="absolute top-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-                  {index + 1}/{banners.length}
                 </div>
               </div>
             </CarouselItem>
@@ -156,9 +180,12 @@ const DynamicImageAccordion = () => {
       {banners.length > 1 && (
         <div className="flex justify-center mt-4 space-x-2">
           {banners.map((_, index) => (
-            <div
+            <button
               key={index}
-              className="w-2 h-2 rounded-full bg-gray-300"
+              className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                index === current ? 'bg-sonoff-orange' : 'bg-gray-300'
+              }`}
+              onClick={() => api?.scrollTo(index)}
             />
           ))}
         </div>

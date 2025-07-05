@@ -154,19 +154,26 @@ const InvoiceManagement = () => {
       const currentYear = new Date().getFullYear();
       const invoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(3, '0')}`;
 
-      // Convert order items to invoice items format
-      const invoiceItems = orderItems.map(item => ({
-        id: item.id,
-        description: item.product_name,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        total: item.quantity * item.price
-      }));
+      // Convert order items to invoice items format with TTC to HT calculation
+      const invoiceItems = orderItems.map(item => {
+        const priceTTC = item.price; // Prix TTC depuis la commande
+        const priceHT = priceTTC / 1.19; // Prix HT (TTC / 1.19)
+        const totalHT = priceHT * item.quantity;
+        
+        return {
+          id: item.id,
+          description: item.product_name,
+          quantity: item.quantity,
+          unitPrice: priceHT, // Prix unitaire HT
+          unitPriceTTC: priceTTC, // Prix unitaire TTC
+          total: totalHT // Total HT
+        };
+      });
 
       // Calculate totals
       const subtotalHT = invoiceItems.reduce((sum, item) => sum + item.total, 0);
       const tva = subtotalHT * 0.19; // 19% TVA
-      const timbreFiscal = 0.6;
+      const timbreFiscal = 1; // 1 DT comme demandé
       const totalTTC = subtotalHT + tva + timbreFiscal;
 
       // Create invoice
@@ -181,6 +188,7 @@ const InvoiceManagement = () => {
           tva: tva,
           timbre_fiscal: timbreFiscal,
           total_ttc: totalTTC,
+          document_type: 'Facture', // Valeur par défaut
           created_by: user?.id,
         })
         .select()
