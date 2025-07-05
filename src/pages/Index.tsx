@@ -6,9 +6,33 @@ import CategoryDropdown from '@/components/CategoryDropdown';
 import ProductGrid from '@/components/ProductGrid';
 import ContactFooter from '@/components/ContactFooter';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Product } from '@/types/product';
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    fetchFeaturedProducts();
+  }, []);
+
+  const fetchFeaturedProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('featured', true)
+        .eq('hidden', false)
+        .limit(8);
+
+      if (error) throw error;
+      setFeaturedProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+    }
+  };
 
   return (
     <Layout>
@@ -23,7 +47,7 @@ const Index = () => {
             <h2 className="text-3xl font-bold text-center mb-8 text-sonoff-blue">
               Nos Produits Phares
             </h2>
-            <ProductGrid featured={true} limit={8} />
+            <ProductGrid products={featuredProducts} title="Nos Produits Phares" />
           </section>
         </div>
         
