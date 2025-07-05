@@ -1,9 +1,11 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { X, Wifi, Radio, ToggleLeft, Monitor, Package, MessageSquare } from 'lucide-react';
+import { X, MessageSquare, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MobileMenuProps {
   isOpen: boolean;
@@ -11,7 +13,37 @@ interface MobileMenuProps {
   phoneNumber?: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  icon?: string;
+}
+
 const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, phoneNumber = '50330000' }) => {
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showCategories, setShowCategories] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
   if (!isOpen) return null;
 
   const whatsappNumber = "21650330000";
@@ -44,6 +76,87 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ isOpen, onClose, phoneNumber = 
                 <MessageSquare size={20} className="mr-2" />
                 <span>Contacter via WhatsApp</span>
               </a>
+            </li>
+            
+            <li>
+              <button
+                onClick={() => setShowCategories(!showCategories)}
+                className="flex items-center justify-between w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-100 rounded-md"
+              >
+                <span>Catégories</span>
+                <ChevronDown 
+                  size={16} 
+                  className={`transform transition-transform ${showCategories ? 'rotate-180' : ''}`}
+                />
+              </button>
+              
+              {showCategories && (
+                <ul className="ml-4 mt-2 space-y-2">
+                  {categories.map((category) => (
+                    <li key={category.id}>
+                      <Link 
+                        to={`/category/${category.slug}`}
+                        onClick={onClose}
+                        className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md"
+                      >
+                        {category.icon && (
+                          <span className="mr-2 text-lg">{category.icon}</span>
+                        )}
+                        {category.name}
+                      </Link>
+                    </li>
+                  ))}
+                  <li>
+                    <Link 
+                      to="/products"
+                      onClick={onClose}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-md border-t pt-3"
+                    >
+                      Tous les produits
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </li>
+
+            <li>
+              <Link 
+                to="/products" 
+                onClick={onClose}
+                className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-md"
+              >
+                Tous les produits
+              </Link>
+            </li>
+            
+            <li>
+              <Link 
+                to="/verify-product" 
+                onClick={onClose}
+                className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-md"
+              >
+                Vérif num série
+              </Link>
+            </li>
+            
+            <li>
+              <Link 
+                to="/blog" 
+                onClick={onClose}
+                className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-md"
+              >
+                Blog
+              </Link>
+            </li>
+            
+            <li>
+              <Link 
+                to="/training" 
+                onClick={onClose}
+                className="block px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-md"
+              >
+                Formation
+              </Link>
             </li>
           </ul>
           

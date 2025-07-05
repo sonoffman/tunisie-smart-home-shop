@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -175,6 +174,7 @@ const BannerManagement = () => {
         actif: bannerForm.actif,
       };
       
+      let result;
       if (bannerForm.id) {
         const { data, error } = await supabase
           .from('banner_accordion')
@@ -183,7 +183,11 @@ const BannerManagement = () => {
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
+        result = data;
         
         toast({
           title: "Bannière mise à jour",
@@ -196,7 +200,11 @@ const BannerManagement = () => {
           .select()
           .single();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
+        result = data;
         
         toast({
           title: "Bannière ajoutée",
@@ -207,6 +215,7 @@ const BannerManagement = () => {
       fetchBanners();
       clearForm();
     } catch (error: any) {
+      console.error('Save banner error:', error);
       toast({
         title: "Erreur",
         description: `Impossible d'enregistrer la bannière: ${error.message}`,

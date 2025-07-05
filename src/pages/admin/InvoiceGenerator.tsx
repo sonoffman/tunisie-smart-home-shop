@@ -13,6 +13,7 @@ import InvoiceHeader from '@/components/invoice/InvoiceHeader';
 import InvoiceItemList from '@/components/invoice/InvoiceItemList';
 import InvoiceSummary from '@/components/invoice/InvoiceSummary';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
+import DocumentTypeSelector from '@/components/invoice/DocumentTypeSelector';
 import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
 import { Customer, InvoiceItem } from '@/types/supabase';
 
@@ -25,10 +26,11 @@ const InvoiceGenerator = () => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [documentType, setDocumentType] = useState('Facture');
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [subtotalHT, setSubtotalHT] = useState(0);
   const [tva, setTva] = useState(0);
-  const [timbreFiscal, setTimbreFiscal] = useState(0.6);
+  const [timbreFiscal, setTimbreFiscal] = useState(1.0);
   const [totalTTC, setTotalTTC] = useState(0);
   const [saving, setSaving] = useState(false);
 
@@ -198,6 +200,7 @@ const InvoiceGenerator = () => {
         invoice_number: invoiceNumber.trim(),
         customer_id: selectedCustomer.id,
         invoice_date: invoiceDate,
+        document_type: documentType,
         items: items as any,
         subtotal_ht: subtotalHT,
         tva: tva,
@@ -216,7 +219,7 @@ const InvoiceGenerator = () => {
 
       toast({
         title: "Succès",
-        description: "Facture créée avec succès",
+        description: `${documentType} créé(e) avec succès`,
       });
 
       navigate(`/admin/invoices/${data.id}`);
@@ -224,7 +227,7 @@ const InvoiceGenerator = () => {
       console.error('Error saving invoice:', error);
       toast({
         title: "Erreur",
-        description: `Impossible de créer la facture: ${error.message}`,
+        description: `Impossible de créer la ${documentType.toLowerCase()}: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -252,7 +255,8 @@ const InvoiceGenerator = () => {
         tva,
         timbreFiscal,
         totalTTC
-      }
+      },
+      documentType
     });
 
     pdf.output('dataurlnewwindow');
@@ -275,7 +279,7 @@ const InvoiceGenerator = () => {
               <ArrowLeft className="h-4 w-4" />
               Retour
             </Button>
-            <h1 className="text-3xl font-bold text-sonoff-blue">Nouvelle Facture</h1>
+            <h1 className="text-3xl font-bold text-sonoff-blue">Nouveau {documentType}</h1>
           </div>
           <div className="space-x-2">
             <Button variant="outline" className="flex items-center gap-2" onClick={handlePreviewPdf}>
@@ -311,9 +315,13 @@ const InvoiceGenerator = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Informations de la facture</CardTitle>
+                <CardTitle>Informations du document</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                <DocumentTypeSelector
+                  value={documentType}
+                  onChange={setDocumentType}
+                />
                 <InvoiceHeader
                   invoiceNumber={invoiceNumber}
                   invoiceDate={invoiceDate}
