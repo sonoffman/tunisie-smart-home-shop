@@ -30,13 +30,13 @@ export const generateInvoicePdf = ({
   // Create a new PDF document
   const doc = new jsPDF();
   
-  // Colors
-  const primaryColor = [41, 128, 185];
-  const secondaryColor = [52, 73, 94];
-  const lightGray = [240, 240, 240];
+  // Colors - explicitly typed as tuples
+  const primaryColor: [number, number, number] = [41, 128, 185];
+  const secondaryColor: [number, number, number] = [52, 73, 94];
+  const lightGray: [number, number, number] = [240, 240, 240];
   
   // Header with company logo and information
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, 210, 40, 'F');
   
   // Company name and details in white
@@ -52,7 +52,7 @@ export const generateInvoicePdf = ({
   doc.text("Tél: +216 55 123 456 | Email: contact@sonoff-store.tn", 14, 37);
   
   // Document title and number
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   doc.text(documentType.toUpperCase(), 140, 60);
@@ -63,10 +63,10 @@ export const generateInvoicePdf = ({
   doc.text(`Date: ${format(new Date(invoiceDate), 'dd MMMM yyyy', { locale: fr })}`, 140, 76);
   
   // Customer information section
-  doc.setFillColor(...lightGray);
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.rect(14, 85, 85, 35, 'F');
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text("Facturé à:", 18, 95);
@@ -123,10 +123,10 @@ export const generateInvoicePdf = ({
   const finalY = (doc as any).lastAutoTable.finalY + 10;
   
   // Totals box
-  doc.setFillColor(...lightGray);
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.rect(120, finalY, 76, 35, 'F');
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(10);
   
   // Totals lines
@@ -148,7 +148,7 @@ export const generateInvoicePdf = ({
   // Footer section
   const footerY = finalY + 50;
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   
@@ -157,13 +157,13 @@ export const generateInvoicePdf = ({
   doc.text(`• Facture payable dans les 30 jours suivant la date d'émission`, 14, footerY + 12);
   
   // Thank you message
-  doc.setTextColor(...primaryColor);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'italic');
   doc.text("Merci pour votre confiance !", 105, footerY + 25, { align: 'center' });
   
   // Add page border
-  doc.setDrawColor(...primaryColor);
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setLineWidth(0.5);
   doc.rect(5, 5, 200, 287);
 
