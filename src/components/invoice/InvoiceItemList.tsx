@@ -1,17 +1,10 @@
 
 import React from 'react';
-import { InvoiceItem } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Plus, Trash2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Trash2, Plus } from 'lucide-react';
+import { InvoiceItem } from '@/types/supabase';
 
 interface InvoiceItemListProps {
   items: InvoiceItem[];
@@ -20,75 +13,101 @@ interface InvoiceItemListProps {
   onItemChange: (id: string, field: keyof InvoiceItem, value: string | number) => void;
 }
 
-const InvoiceItemList: React.FC<InvoiceItemListProps> = ({
-  items,
-  onAddItem,
-  onRemoveItem,
-  onItemChange,
-}) => {
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Articles</h3>
-        <Button variant="outline" size="sm" onClick={onAddItem}>
-          <Plus className="h-4 w-4 mr-1" /> Ajouter un article
+const InvoiceItemList = ({ items, onAddItem, onRemoveItem, onItemChange }: InvoiceItemListProps) => {
+  
+  const calculateHT = (ttc: number): number => {
+    return ttc / 1.19; // Prix HT = Prix TTC / 1.19
+  };
+
+  const handlePriceChange = (id: string, ttcPrice: number) => {
+    const htPrice = calculateHT(ttcPrice);
+    onItemChange(id, 'unitPrice', htPrice);
+  };
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500 mb-4">Aucun article ajouté</p>
+        <Button onClick={onAddItem} className="flex items-center gap-2">
+          <Plus className="h-4 w-4" />
+          Ajouter un article
         </Button>
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {items.map((item) => (
+        <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border rounded-lg">
+          <div className="col-span-5">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <Textarea
+              value={item.description}
+              onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
+              placeholder="Description du produit"
+              rows={2}
+            />
+          </div>
+          
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Quantité
+            </label>
+            <Input
+              type="number"
+              min="1"
+              value={item.quantity}
+              onChange={(e) => onItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+            />
+          </div>
+          
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Prix TTC unitaire
+            </label>
+            <Input
+              type="number"
+              step="0.001"
+              value={(item.unitPrice * 1.19).toFixed(3)}
+              onChange={(e) => {
+                const ttcValue = parseFloat(e.target.value) || 0;
+                handlePriceChange(item.id, ttcValue);
+              }}
+            />
+          </div>
+          
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Total HT
+            </label>
+            <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium">
+              {item.total.toFixed(3)} DT
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              TTC: {(item.total * 1.19).toFixed(3)} DT
+            </div>
+          </div>
+          
+          <div className="col-span-1 flex items-end">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onRemoveItem(item.id)}
+              className="w-full"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      ))}
       
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-[40%]">Description</TableHead>
-            <TableHead>Quantité</TableHead>
-            <TableHead>Prix unitaire (DT)</TableHead>
-            <TableHead>Total (DT)</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.map((item) => (
-            <TableRow key={item.id}>
-              <TableCell>
-                <Input
-                  value={item.description}
-                  onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
-                  placeholder="Description de l'article"
-                />
-              </TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  min="1"
-                  value={item.quantity}
-                  onChange={(e) => onItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                />
-              </TableCell>
-              <TableCell>
-                <Input
-                  type="number"
-                  step="0.001"
-                  min="0"
-                  value={item.unitPrice}
-                  onChange={(e) => onItemChange(item.id, 'unitPrice', parseFloat(e.target.value) || 0)}
-                />
-              </TableCell>
-              <TableCell className="font-medium">
-                {item.total.toFixed(3)}
-              </TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onRemoveItem(item.id)}
-                  disabled={items.length === 1}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Button onClick={onAddItem} variant="outline" className="w-full flex items-center gap-2">
+        <Plus className="h-4 w-4" />
+        Ajouter un article
+      </Button>
     </div>
   );
 };

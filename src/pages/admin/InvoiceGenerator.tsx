@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,11 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, Eye, Plus } from 'lucide-react';
 import CustomerSelector from '@/components/invoice/CustomerSelector';
-import InvoiceHeader from '@/components/invoice/InvoiceHeader';
 import InvoiceItemList from '@/components/invoice/InvoiceItemList';
 import InvoiceSummary from '@/components/invoice/InvoiceSummary';
 import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
-import DocumentTypeSelector from '@/components/invoice/DocumentTypeSelector';
+import InvoiceCustomization from '@/components/invoice/InvoiceCustomization';
 import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
 import { Customer, InvoiceItem } from '@/types/supabase';
 
@@ -27,6 +25,7 @@ const InvoiceGenerator = () => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
   const [documentType, setDocumentType] = useState('Facture');
+  const [footerMessage, setFooterMessage] = useState('Merci de votre confiance !');
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [subtotalHT, setSubtotalHT] = useState(0);
   const [tva, setTva] = useState(0);
@@ -103,8 +102,8 @@ const InvoiceGenerator = () => {
       id: Date.now().toString(),
       description: '',
       quantity: 1,
-      unitPrice: 0,
-      total: 0,
+      unitPrice: 0, // Prix HT
+      total: 0, // Total HT
     };
     setItems([...items, newItem]);
   };
@@ -114,7 +113,7 @@ const InvoiceGenerator = () => {
       if (item.id === id) {
         const updatedItem = { ...item, [field]: value };
         if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice;
+          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice; // Total HT
         }
         return updatedItem;
       }
@@ -147,7 +146,8 @@ const InvoiceGenerator = () => {
     setTotalTTC(values.totalTTC);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+  // Subtotal = somme des totaux TTC des articles (pour affichage dans le calculateur)
+  const subtotalTTC = items.reduce((sum, item) => sum + (item.total * 1.19), 0);
 
   const saveInvoice = async () => {
     if (!selectedCustomer) {
@@ -256,7 +256,8 @@ const InvoiceGenerator = () => {
         timbreFiscal,
         totalTTC
       },
-      documentType
+      documentType,
+      footerMessage
     });
 
     pdf.output('dataurlnewwindow');
@@ -315,18 +316,16 @@ const InvoiceGenerator = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>Informations du document</CardTitle>
+                <CardTitle>Paramètres du document</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <DocumentTypeSelector
-                  value={documentType}
-                  onChange={setDocumentType}
-                />
-                <InvoiceHeader
+              <CardContent>
+                <InvoiceCustomization
+                  documentType={documentType}
                   invoiceNumber={invoiceNumber}
-                  invoiceDate={invoiceDate}
-                  onNumberChange={setInvoiceNumber}
-                  onDateChange={setInvoiceDate}
+                  footerMessage={footerMessage}
+                  onDocumentTypeChange={setDocumentType}
+                  onInvoiceNumberChange={setInvoiceNumber}
+                  onFooterMessageChange={setFooterMessage}
                 />
               </CardContent>
             </Card>
@@ -359,7 +358,7 @@ const InvoiceGenerator = () => {
               </CardHeader>
               <CardContent>
                 <InvoiceTaxCalculator
-                  subtotal={subtotal}
+                  subtotal={subtotalTTC}
                   onCalculate={handleTaxCalculation}
                 />
               </CardContent>
