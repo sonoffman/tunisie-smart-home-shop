@@ -1,198 +1,182 @@
 
-import { Customer, InvoiceItem } from '@/types/supabase';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { Invoice, Customer, InvoiceItem } from '@/types/supabase';
 
-interface GeneratePdfParams {
-  invoiceNumber: string;
-  invoiceDate: string;
-  customer: Customer;
-  items: InvoiceItem[];
-  taxes: {
-    subtotalHT: number;
-    tva: number;
-    timbreFiscal: number;
-    totalTTC: number;
-  };
-  documentType?: string;
-  footerMessage?: string;
+interface InvoiceParameters {
+  documentType: 'Facture' | 'Devis' | 'Bon de Livraison';
+  footerMessage: string;
 }
 
-export const generateInvoicePdf = ({
-  invoiceNumber,
-  invoiceDate,
-  customer,
-  items,
-  taxes,
-  documentType = 'Facture',
-  footerMessage = 'Merci de votre confiance !'
-}: GeneratePdfParams): jsPDF => {
+export const generateInvoicePDF = (
+  invoice: Invoice,
+  customer: Customer,
+  parameters: InvoiceParameters
+) => {
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  const margin = 20;
+
+  // Configuration des couleurs
+  const primaryColor = [41, 128, 185]; // Bleu professionnel
+  const secondaryColor = [52, 73, 94]; // Gris foncé
+  const lightGray = [236, 240, 241];
+
+  // En-tête avec logo et informations entreprise
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, pageWidth, 35, 'F');
   
-  // Colors - explicitly typed as tuples
-  const primaryColor: [number, number, number] = [41, 128, 185];
-  const secondaryColor: [number, number, number] = [52, 73, 94];
-  const lightGray: [number, number, number] = [240, 240, 240];
-  const orange: [number, number, number] = [243, 156, 18];
-  
-  // Header with modern design
-  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.rect(0, 0, 210, 50, 'F');
-  
-  // Company logo area (placeholder)
-  doc.setFillColor(255, 255, 255);
-  doc.rect(14, 10, 30, 20, 'F');
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.setFontSize(8);
-  doc.text('LOGO', 29, 22, { align: 'center' });
-  
-  // Company information in white
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text("Smart Africa Technology", 50, 20);
-  
-  doc.setFontSize(11);
+  doc.text('SONOFF TUNISIE', margin, 25);
+
+  // Informations entreprise (à droite)
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text("Spécialiste en domotique et solutions IoT", 50, 28);
-  doc.text("123 Rue de Tunis, Tunis 1000, Tunisie", 50, 35);
-  doc.text("Tél: +216 55 123 456 | Email: contact@sonoff-store.tn", 50, 42);
+  const companyInfo = [
+    'Adresse de votre entreprise',
+    'Ville, Code Postal',
+    'Tél: +216 XX XX XX XX',
+    'Email: contact@sonoff-tunisie.tn'
+  ];
   
-  // Document title and number with modern styling
-  doc.setFillColor(orange[0], orange[1], orange[2]);
-  doc.rect(140, 60, 56, 25, 'F');
-  
-  doc.setTextColor(255, 255, 255);
+  companyInfo.forEach((line, index) => {
+    doc.text(line, pageWidth - margin, 15 + (index * 4), { align: 'right' });
+  });
+
+  // Type de document et numéro
+  doc.setTextColor(...secondaryColor);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text(documentType.toUpperCase(), 168, 70, { align: 'center' });
+  doc.text(parameters.documentType.toUpperCase(), margin, 55);
   
-  doc.setFontSize(10);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text(`N° ${invoiceNumber}`, 168, 78, { align: 'center' });
-  doc.text(`Date: ${format(new Date(invoiceDate), 'dd/MM/yyyy', { locale: fr })}`, 168, 85, { align: 'center' });
+  doc.text(`N° ${invoice.invoice_number}`, margin, 65);
+  doc.text(`Date: ${new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}`, margin, 75);
+
+  // Informations client (encadré)
+  doc.setFillColor(...lightGray);
+  doc.rect(margin, 85, pageWidth - (2 * margin), 35, 'F');
+  doc.setDrawColor(...secondaryColor);
+  doc.rect(margin, 85, pageWidth - (2 * margin), 35);
   
-  // Customer information with modern box
-  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-  doc.rect(14, 95, 90, 40, 'F');
-  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.setLineWidth(0.5);
-  doc.rect(14, 95, 90, 40);
-  
-  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+  doc.setTextColor(...secondaryColor);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text("Facturé à:", 18, 105);
+  doc.text('FACTURÉ À:', margin + 5, 95);
   
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.text(customer.name, 18, 115);
-  doc.text(customer.address, 18, 122);
-  doc.text(`Tél: ${customer.phone}`, 18, 129);
-  if (customer.email) {
-    doc.text(`Email: ${customer.email}`, 18, 136);
-  }
+  doc.text(customer.name, margin + 5, 105);
+  doc.text(customer.address, margin + 5, 112);
+  if (customer.phone) doc.text(customer.phone, margin + 5, 119);
+  if (customer.email) doc.text(customer.email, margin + 5, 126);
+
+  // Tableau des articles
+  const tableStartY = 135;
+  const items = Array.isArray(invoice.items) ? invoice.items : [];
   
-  // Invoice items table with better styling
-  const tableColumn = ["Description", "Qté", "Prix unit. HT", "Total HT"];
-  const tableRows = items.map(item => [
-    item.description,
-    item.quantity.toString(),
-    `${item.unitPrice.toFixed(3)} DT`,
-    `${item.total.toFixed(3)} DT`
-  ]);
-  
-  const startY = 150;
-  
-  autoTable(doc, {
-    head: [tableColumn],
-    body: tableRows,
-    startY: startY,
-    theme: 'grid',
-    headStyles: { 
-      fillColor: primaryColor, 
+  const tableData = items.map((item: InvoiceItem) => {
+    const ttc = item.unitPrice;
+    const ht = ttc / 1.19; // Calcul HT correct
+    const tva = ttc - ht;
+    
+    return [
+      item.description,
+      item.quantity.toString(),
+      `${ht.toFixed(3)} TND`,
+      `${tva.toFixed(3)} TND`,
+      `${ttc.toFixed(3)} TND`,
+      `${(ttc * item.quantity).toFixed(3)} TND`
+    ];
+  });
+
+  (doc as any).autoTable({
+    startY: tableStartY,
+    head: [['Désignation', 'Qté', 'Prix unit. HT', 'TVA unit.', 'Prix unit. TTC', 'Total TTC']],
+    body: tableData,
+    theme: 'striped',
+    headStyles: {
+      fillColor: primaryColor,
       textColor: 255,
       fontSize: 10,
-      fontStyle: 'bold',
-      halign: 'center'
+      fontStyle: 'bold'
     },
     bodyStyles: {
       fontSize: 9,
       textColor: secondaryColor
     },
     alternateRowStyles: {
-      fillColor: [249, 249, 249]
+      fillColor: [248, 249, 250]
+    },
+    margin: { left: margin, right: margin },
+    columnStyles: {
+      0: { cellWidth: 70 },
+      1: { cellWidth: 20, halign: 'center' },
+      2: { cellWidth: 25, halign: 'right' },
+      3: { cellWidth: 25, halign: 'right' },
+      4: { cellWidth: 25, halign: 'right' },
+      5: { cellWidth: 30, halign: 'right' }
+    }
+  });
+
+  // Totaux (alignés à droite)
+  const finalY = (doc as any).lastAutoTable.finalY + 10;
+  
+  // Calculs corrects
+  const realSubtotalHT = items.reduce((sum: number, item: InvoiceItem) => {
+    return sum + ((item.unitPrice / 1.19) * item.quantity);
+  }, 0);
+  
+  const totalTVA = items.reduce((sum: number, item: InvoiceItem) => {
+    const ht = item.unitPrice / 1.19;
+    const tva = item.unitPrice - ht;
+    return sum + (tva * item.quantity);
+  }, 0);
+
+  const totalsData = [
+    ['Sous-total HT:', `${realSubtotalHT.toFixed(3)} TND`],
+    ['TVA (19%):', `${totalTVA.toFixed(3)} TND`],
+    ['Timbre fiscal:', '1.000 TND'],
+    ['Total TTC:', `${invoice.total_ttc.toFixed(3)} TND`]
+  ];
+
+  (doc as any).autoTable({
+    startY: finalY,
+    body: totalsData,
+    theme: 'plain',
+    styles: {
+      fontSize: 11,
+      textColor: secondaryColor,
+      cellPadding: 2
     },
     columnStyles: {
-      0: { cellWidth: 85, halign: 'left' },
-      1: { cellWidth: 25, halign: 'center' },
-      2: { cellWidth: 35, halign: 'right' },
-      3: { cellWidth: 35, halign: 'right' }
+      0: { cellWidth: 40, fontStyle: 'bold', halign: 'right' },
+      1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' }
     },
-    margin: { left: 14, right: 14 }
+    margin: { left: pageWidth - 100, right: margin }
   });
-  
-  // Totals section with modern design
-  const finalY = (doc as any).lastAutoTable.finalY + 15;
-  
-  // Totals box with border
-  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-  doc.rect(120, finalY, 76, 45, 'F');
-  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.rect(120, finalY, 76, 45);
-  
-  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  
-  // Totals lines
-  doc.text('Sous-total HT:', 125, finalY + 10);
-  doc.text(`${taxes.subtotalHT.toFixed(3)} DT`, 190, finalY + 10, { align: 'right' });
-  
-  doc.text('TVA (19%):', 125, finalY + 20);
-  doc.text(`${taxes.tva.toFixed(3)} DT`, 190, finalY + 20, { align: 'right' });
-  
-  doc.text('Timbre fiscal:', 125, finalY + 30);
-  doc.text(`${taxes.timbreFiscal.toFixed(3)} DT`, 190, finalY + 30, { align: 'right' });
-  
-  // Draw line before total
-  doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.line(125, finalY + 35, 190, finalY + 35);
-  
-  // Total TTC with emphasis
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setFillColor(orange[0], orange[1], orange[2]);
-  doc.rect(125, finalY + 37, 65, 8, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.text('TOTAL TTC:', 128, finalY + 42);
-  doc.text(`${taxes.totalTTC.toFixed(3)} DT`, 187, finalY + 42, { align: 'right' });
-  
-  // Footer section with custom message
-  const footerY = finalY + 60;
-  
-  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  
-  doc.text("Modalités de paiement:", 14, footerY);
-  doc.text("• Paiement à la livraison ou par virement bancaire", 14, footerY + 8);
-  doc.text("• Document payable dans les 30 jours suivant la date d'émission", 14, footerY + 16);
-  
-  // Custom footer message
-  if (footerMessage) {
-    doc.setTextColor(orange[0], orange[1], orange[2]);
-    doc.setFontSize(12);
+
+  // Message personnalisé
+  if (parameters.footerMessage) {
+    const messageY = (doc as any).lastAutoTable.finalY + 20;
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
-    doc.text(footerMessage, 105, footerY + 30, { align: 'center' });
+    doc.setTextColor(...primaryColor);
+    doc.text(parameters.footerMessage, pageWidth / 2, messageY, { align: 'center' });
   }
+
+  // Pied de page
+  const footerY = doc.internal.pageSize.height - 30;
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, footerY, pageWidth, 30, 'F');
   
-  // Add decorative border
-  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.setLineWidth(1);
-  doc.rect(5, 5, 200, 287);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Merci de votre confiance | www.sonoff-tunisie.tn', pageWidth / 2, footerY + 15, { align: 'center' });
 
   return doc;
 };

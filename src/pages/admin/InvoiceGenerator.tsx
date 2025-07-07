@@ -1,19 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Download, Eye, Plus } from 'lucide-react';
-import CustomerSelector from '@/components/invoice/CustomerSelector';
-import InvoiceItemList from '@/components/invoice/InvoiceItemList';
-import InvoiceSummary from '@/components/invoice/InvoiceSummary';
-import InvoiceTaxCalculator from '@/components/invoice/InvoiceTaxCalculator';
-import InvoiceCustomization from '@/components/invoice/InvoiceCustomization';
-import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
+import { Trash2, Plus, ArrowLeft } from 'lucide-react';
+import { CustomerSelector } from '@/components/invoice/CustomerSelector';
+import { InvoiceItemList } from '@/components/invoice/InvoiceItemList';
+import { InvoiceSummary } from '@/components/invoice/InvoiceSummary';
+import { generateInvoicePDF } from '@/components/invoice/InvoicePdfGenerator';
+import InvoiceParametersDialog from '@/components/invoice/InvoiceParametersDialog';
 import { Customer, InvoiceItem } from '@/types/supabase';
+
+interface Item {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+}
 
 const InvoiceGenerator = () => {
   const { user, isAdmin } = useAuth();
@@ -22,29 +30,22 @@ const InvoiceGenerator = () => {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [items, setItems] = useState<Item[]>([]);
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
-  const [documentType, setDocumentType] = useState('Facture');
-  const [footerMessage, setFooterMessage] = useState('Merci de votre confiance !');
-  const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [subtotalHT, setSubtotalHT] = useState(0);
-  const [tva, setTva] = useState(0);
-  const [timbreFiscal, setTimbreFiscal] = useState(1.0);
-  const [totalTTC, setTotalTTC] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [showParametersDialog, setShowParametersDialog] = useState(false);
 
   useEffect(() => {
     if (user === null || !isAdmin) {
       navigate('/');
       toast({
         title: "Accès refusé",
-        description: user === null 
-          ? "Vous devez être connecté pour accéder à cette page." 
+        description: user === null
+          ? "Vous devez être connecté pour accéder à cette page."
           : "Vous n'avez pas les droits d'administrateur.",
         variant: "destructive",
       });
     } else {
-      generateInvoiceNumber();
       fetchCustomers();
     }
   }, [user, isAdmin, navigate, toast]);
@@ -58,176 +59,122 @@ const InvoiceGenerator = () => {
 
       if (error) throw error;
       setCustomers(data || []);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
+    } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de charger les clients",
+        description: `Impossible de charger les clients: ${error.message}`,
         variant: "destructive",
       });
     }
   };
 
-  const generateInvoiceNumber = async () => {
+  const handleAddItem = () => {
+    setItems([
+      ...items,
+      {
+        id: Date.now().toString(),
+        description: '',
+        quantity: 1,
+        unitPrice: 0,
+      },
+    ]);
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setItems(items.filter((item) => item.id !== id));
+  };
+
+  const handleItemChange = (id: string, field: string, value: string | number) => {
+    setItems(
+      items.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const clearForm = () => {
+    setSelectedCustomer(null);
+    setItems([]);
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
+  };
+
+  const handleGenerateInvoice = () => {
+    if (!selectedCustomer || items.length === 0) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un client et ajouter au moins un article",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Générer un numéro de facture par défaut
+    const defaultInvoiceNumber = `FAC-${Date.now()}`;
+    setShowParametersDialog(true);
+  };
+
+  const handleConfirmGeneration = async (parameters: any) => {
     try {
-      const { data, error } = await supabase
+      setSaving(true);
+
+      // Calculs corrects
+      const realSubtotalHT = items.reduce((sum, item) => {
+        return sum + ((item.unitPrice / 1.19) * item.quantity);
+      }, 0);
+      
+      const totalTVA = items.reduce((sum, item) => {
+        const ht = item.unitPrice / 1.19;
+        const tva = item.unitPrice - ht;
+        return sum + (tva * item.quantity);
+      }, 0);
+      
+      const timbreFiscal = 1; // Fixé à 1 DT
+      const totalTTC = realSubtotalHT + totalTVA + timbreFiscal;
+
+      // Créer la facture avec les bons calculs
+      const { data: invoice, error } = await supabase
         .from('invoices')
-        .select('invoice_number')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) throw error;
-
-      let nextNumber = 1;
-      if (data && data.length > 0) {
-        const lastNumber = data[0].invoice_number;
-        const match = lastNumber.match(/(\d+)$/);
-        if (match) {
-          nextNumber = parseInt(match[1]) + 1;
-        }
-      }
-
-      const currentYear = new Date().getFullYear();
-      const newInvoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(3, '0')}`;
-      setInvoiceNumber(newInvoiceNumber);
-    } catch (error) {
-      console.error('Error generating invoice number:', error);
-      const currentYear = new Date().getFullYear();
-      setInvoiceNumber(`INV-${currentYear}-001`);
-    }
-  };
-
-  const addItem = () => {
-    const newItem: InvoiceItem = {
-      id: Date.now().toString(),
-      description: '',
-      quantity: 1,
-      unitPrice: 0, // Prix HT
-      total: 0, // Total HT
-    };
-    setItems([...items, newItem]);
-  };
-
-  const updateItem = (id: string, field: keyof InvoiceItem, value: string | number) => {
-    setItems(items.map(item => {
-      if (item.id === id) {
-        const updatedItem = { ...item, [field]: value };
-        if (field === 'quantity' || field === 'unitPrice') {
-          updatedItem.total = updatedItem.quantity * updatedItem.unitPrice; // Total HT
-        }
-        return updatedItem;
-      }
-      return item;
-    }));
-  };
-
-  const removeItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
-  };
-
-  const handleCustomerChange = (customerId: string) => {
-    const customer = customers.find(c => c.id === customerId);
-    setSelectedCustomer(customer || null);
-  };
-
-  const handleCustomerCreated = () => {
-    fetchCustomers();
-  };
-
-  const handleTaxCalculation = (values: {
-    subtotalHT: number;
-    tva: number;
-    timbreFiscal: number;
-    totalTTC: number;
-  }) => {
-    setSubtotalHT(values.subtotalHT);
-    setTva(values.tva);
-    setTimbreFiscal(values.timbreFiscal);
-    setTotalTTC(values.totalTTC);
-  };
-
-  // Subtotal = somme des totaux TTC des articles (pour affichage dans le calculateur)
-  const subtotalTTC = items.reduce((sum, item) => sum + (item.total * 1.19), 0);
-
-  const saveInvoice = async () => {
-    if (!selectedCustomer) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un client",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (items.length === 0) {
-      toast({
-        title: "Erreur", 
-        description: "Veuillez ajouter au moins un article",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!invoiceNumber.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Le numéro de facture est obligatoire",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setSaving(true);
-    
-    try {
-      const { data: existingInvoice } = await supabase
-        .from('invoices')
-        .select('id')
-        .eq('invoice_number', invoiceNumber.trim())
-        .maybeSingle();
-
-      if (existingInvoice) {
-        toast({
-          title: "Erreur",
-          description: "Ce numéro de facture existe déjà",
-          variant: "destructive",
-        });
-        setSaving(false);
-        return;
-      }
-
-      const invoiceData = {
-        invoice_number: invoiceNumber.trim(),
-        customer_id: selectedCustomer.id,
-        invoice_date: invoiceDate,
-        document_type: documentType,
-        items: items as any,
-        subtotal_ht: subtotalHT,
-        tva: tva,
-        timbre_fiscal: timbreFiscal,
-        total_ttc: totalTTC,
-        created_by: user?.id || null,
-      };
-
-      const { data, error } = await supabase
-        .from('invoices')
-        .insert(invoiceData)
+        .insert({
+          customer_id: selectedCustomer.id,
+          invoice_number: parameters.invoiceNumber,
+          invoice_date: invoiceDate,
+          document_type: parameters.documentType,
+          items: items.map(item => ({
+            id: item.id,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.unitPrice * item.quantity
+          })),
+          subtotal_ht: realSubtotalHT,
+          tva: totalTVA,
+          timbre_fiscal: timbreFiscal,
+          total_ttc: totalTTC,
+          created_by: user?.id
+        })
         .select()
         .single();
 
       if (error) throw error;
 
+      // Générer le PDF avec les nouveaux paramètres
+      const doc = generateInvoicePDF(invoice, selectedCustomer, parameters);
+      doc.save(`${parameters.documentType}_${parameters.invoiceNumber}.pdf`);
+
       toast({
         title: "Succès",
-        description: `${documentType} créé(e) avec succès`,
+        description: `${parameters.documentType} générée avec succès`,
       });
 
-      navigate(`/admin/invoices/${data.id}`);
+      // Reset
+      setItems([]);
+      setSelectedCustomer(null);
+      setInvoiceDate(new Date().toISOString().split('T')[0]);
+
     } catch (error: any) {
-      console.error('Error saving invoice:', error);
       toast({
         title: "Erreur",
-        description: `Impossible de créer la ${documentType.toLowerCase()}: ${error.message}`,
+        description: `Erreur lors de la génération: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -235,151 +182,90 @@ const InvoiceGenerator = () => {
     }
   };
 
-  const handlePreviewPdf = () => {
-    if (!selectedCustomer || items.length === 0) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un client et ajouter des articles",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const pdf = generateInvoicePdf({
-      invoiceNumber,
-      invoiceDate,
-      customer: selectedCustomer,
-      items,
-      taxes: {
-        subtotalHT,
-        tva,
-        timbreFiscal,
-        totalTTC
-      },
-      documentType,
-      footerMessage
-    });
-
-    pdf.output('dataurlnewwindow');
-  };
-
-  if (!user || !isAdmin) {
-    return null;
-  }
-
   return (
     <Layout>
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/admin/invoices')}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour
-            </Button>
-            <h1 className="text-3xl font-bold text-sonoff-blue">Nouveau {documentType}</h1>
-          </div>
-          <div className="space-x-2">
-            <Button variant="outline" className="flex items-center gap-2" onClick={handlePreviewPdf}>
-              <Eye className="h-4 w-4" />
-              Aperçu
-            </Button>
-            <Button 
-              onClick={saveInvoice}
-              disabled={saving || !selectedCustomer || items.length === 0}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              {saving ? 'Enregistrement...' : 'Enregistrer'}
-            </Button>
-          </div>
+          <h1 className="text-3xl font-bold text-sonoff-blue">
+            Générateur de Factures
+          </h1>
+          <Button variant="outline" onClick={() => navigate('/admin')}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Retour au dashboard
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Client</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CustomerSelector 
-                  customers={customers}
-                  selectedCustomer={selectedCustomer}
-                  onCustomerChange={handleCustomerChange}
-                  onCustomerCreated={handleCustomerCreated}
-                />
-              </CardContent>
-            </Card>
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Informations du client</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomerSelector
+              customers={customers}
+              selectedCustomer={selectedCustomer}
+              onCustomerSelect={(customer) => setSelectedCustomer(customer)}
+            />
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Paramètres du document</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <InvoiceCustomization
-                  documentType={documentType}
-                  invoiceNumber={invoiceNumber}
-                  footerMessage={footerMessage}
-                  onDocumentTypeChange={setDocumentType}
-                  onInvoiceNumberChange={setInvoiceNumber}
-                  onFooterMessageChange={setFooterMessage}
-                />
-              </CardContent>
-            </Card>
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Détails de la facture</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-4">
+              <Label htmlFor="invoiceDate" className="block text-sm font-medium text-gray-700">
+                Date de la facture
+              </Label>
+              <Input
+                type="date"
+                id="invoiceDate"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+                className="mt-1"
+              />
+            </div>
 
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Articles</CardTitle>
-                  <Button onClick={addItem} size="sm" className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    Ajouter un article
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <InvoiceItemList
-                  items={items}
-                  onAddItem={addItem}
-                  onRemoveItem={removeItem}
-                  onItemChange={updateItem}
-                />
-              </CardContent>
-            </Card>
-          </div>
+            <InvoiceItemList
+              items={items}
+              onItemChange={handleItemChange}
+              onRemoveItem={handleRemoveItem}
+            />
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Calculs</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <InvoiceTaxCalculator
-                  subtotal={subtotalTTC}
-                  onCalculate={handleTaxCalculation}
-                />
-              </CardContent>
-            </Card>
+            <Button
+              variant="secondary"
+              onClick={handleAddItem}
+              className="mt-4"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Ajouter un article
+            </Button>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Récapitulatif</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <InvoiceSummary
-                  subtotalHT={subtotalHT}
-                  tva={tva}
-                  timbreFiscal={timbreFiscal}
-                  totalTTC={totalTTC}
-                />
-              </CardContent>
-            </Card>
-          </div>
+        {selectedCustomer && items.length > 0 && (
+          <InvoiceSummary items={items} />
+        )}
+        
+        <div className="flex justify-end space-x-4">
+          <Button variant="outline" onClick={clearForm}>
+            Réinitialiser
+          </Button>
+          <Button 
+            onClick={handleGenerateInvoice}
+            disabled={!selectedCustomer || items.length === 0 || saving}
+            className="bg-sonoff-blue hover:bg-sonoff-teal"
+          >
+            {saving ? 'Génération...' : 'Configurer et Générer'}
+          </Button>
         </div>
       </div>
+
+      <InvoiceParametersDialog
+        open={showParametersDialog}
+        onOpenChange={setShowParametersDialog}
+        onConfirm={handleConfirmGeneration}
+        defaultInvoiceNumber={`FAC-${Date.now()}`}
+      />
     </Layout>
   );
 };
