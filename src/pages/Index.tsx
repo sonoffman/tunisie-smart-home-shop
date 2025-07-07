@@ -22,13 +22,29 @@ const Index = () => {
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select(`
+          *,
+          categories(name)
+        `)
         .eq('featured', true)
         .eq('hidden', false)
         .limit(8);
 
       if (error) throw error;
-      setFeaturedProducts(data || []);
+      
+      // Transform Supabase data to match Product interface
+      const transformedProducts: Product[] = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        imageUrl: item.main_image_url || '',
+        category: item.categories?.name || 'Non catégorisé',
+        description: item.description || '',
+        stock: item.stock_quantity,
+        slug: item.slug
+      }));
+      
+      setFeaturedProducts(transformedProducts);
     } catch (error) {
       console.error('Error fetching featured products:', error);
     }
