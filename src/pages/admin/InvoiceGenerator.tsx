@@ -91,13 +91,7 @@ const InvoiceGenerator = () => {
     setItems(
       items.map((item) => {
         if (item.id === id) {
-          const updatedItem = { ...item, [field]: value };
-          // Recalculer le prix unitaire HT si on modifie le prix TTC
-          if (field === 'unitPrice') {
-            // La valeur entrée est en TTC, on stocke en HT
-            updatedItem.unitPrice = Number(value) / 1.19;
-          }
-          return updatedItem;
+          return { ...item, [field]: value };
         }
         return item;
       })
@@ -160,9 +154,9 @@ const InvoiceGenerator = () => {
     try {
       setSaving(true);
 
-      // Calculs corrects (les prix sont stockés en HT)
+      // Calculs corrects - les prix entrés sont en TTC
       const realSubtotalHT = items.reduce((sum, item) => {
-        return sum + (item.unitPrice * item.quantity);
+        return sum + ((item.unitPrice / 1.19) * item.quantity);
       }, 0);
       
       const totalTVA = realSubtotalHT * 0.19;
@@ -173,7 +167,13 @@ const InvoiceGenerator = () => {
         realSubtotalHT,
         totalTVA,
         timbreFiscal,
-        totalTTC
+        totalTTC,
+        itemsWithPrices: items.map(item => ({
+          description: item.description,
+          prixTTC: item.unitPrice,
+          prixHT: item.unitPrice / 1.19,
+          quantity: item.quantity
+        }))
       });
 
       // Créer la facture dans la base de données
@@ -186,8 +186,8 @@ const InvoiceGenerator = () => {
           id: item.id,
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice * 1.19, // Stocker en TTC pour la compatibilité
-          total: (item.unitPrice * 1.19) * item.quantity
+          unitPrice: item.unitPrice, // Stocker le prix TTC
+          total: item.unitPrice * item.quantity
         })),
         subtotal_ht: realSubtotalHT,
         tva: totalTVA,
@@ -209,15 +209,15 @@ const InvoiceGenerator = () => {
 
       console.log('Facture créée avec succès:', invoice);
 
-      // Convertir les données pour le PDF (utiliser les prix TTC pour l'affichage)
+      // Convertir les données pour le PDF
       const invoiceForPdf = {
         ...invoice,
         items: items.map(item => ({
           id: item.id,
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice * 1.19, // Prix TTC pour l'affichage
-          total: (item.unitPrice * 1.19) * item.quantity
+          unitPrice: item.unitPrice, // Prix TTC
+          total: item.unitPrice * item.quantity
         }))
       };
 
@@ -247,8 +247,9 @@ const InvoiceGenerator = () => {
 
   // Calculer les totaux pour l'affichage
   const calculateTotals = () => {
-    // Les prix unitaires sont stockés en HT
-    const subtotalHT = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    // Les prix unitaires sont entrés en TTC
+    const subtotalTTC = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const subtotalHT = subtotalTTC / 1.19;
     const tva = subtotalHT * 0.19;
     const timbreFiscal = 1;
     const totalTTC = subtotalHT + tva + timbreFiscal;
@@ -325,7 +326,7 @@ const InvoiceGenerator = () => {
 
             <div>
               <Label className="block text-sm font-medium text-gray-700 mb-4">
-                Articles / Services
+                Articles / Services (prix TTC)
               </Label>
               <InvoiceItemList
                 items={items.map(item => ({

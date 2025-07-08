@@ -18,11 +18,11 @@ export const generateInvoicePDF = (
   const pageHeight = doc.internal.pageSize.height;
   const margin = 20;
 
-  // Configuration des couleurs
-  const primaryColor = [41, 128, 185] as const; // Bleu professionnel
-  const secondaryColor = [52, 73, 94] as const; // Gris foncé
-  const lightGray = [236, 240, 241] as const;
-  const accentColor = [46, 204, 113] as const; // Vert accent
+  // Configuration des couleurs avec typage correct
+  const primaryColor: [number, number, number] = [41, 128, 185];
+  const secondaryColor: [number, number, number] = [52, 73, 94];
+  const lightGray: [number, number, number] = [236, 240, 241];
+  const accentColor: [number, number, number] = [46, 204, 113];
 
   // En-tête moderne avec dégradé
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -117,11 +117,12 @@ export const generateInvoicePDF = (
   const tableStartY = 155;
   const items = Array.isArray(invoice.items) ? invoice.items : [];
   
+  // Calculs corrects - les prix sont stockés en TTC dans la base
   const tableData = items.map((item: InvoiceItem) => {
-    const prixTTC = item.unitPrice;
-    const prixHT = prixTTC / 1.19;
-    const tvaUnitaire = prixTTC - prixHT;
-    const totalTTC = prixTTC * item.quantity;
+    const prixTTC = item.unitPrice; // Prix TTC stocké
+    const prixHT = prixTTC / 1.19; // Prix HT calculé
+    const tvaUnitaire = prixTTC - prixHT; // TVA unitaire
+    const totalTTC = prixTTC * item.quantity; // Total TTC
     
     return [
       item.description,
@@ -139,7 +140,7 @@ export const generateInvoicePDF = (
     body: tableData,
     theme: 'grid',
     headStyles: {
-      fillColor: [primaryColor[0], primaryColor[1], primaryColor[2]],
+      fillColor: primaryColor,
       textColor: 255,
       fontSize: 10,
       fontStyle: 'bold',
@@ -147,7 +148,7 @@ export const generateInvoicePDF = (
     },
     bodyStyles: {
       fontSize: 9,
-      textColor: [secondaryColor[0], secondaryColor[1], secondaryColor[2]]
+      textColor: secondaryColor
     },
     alternateRowStyles: {
       fillColor: [248, 249, 250]
@@ -170,7 +171,7 @@ export const generateInvoicePDF = (
   // Totaux avec design moderne
   const finalY = (doc as any).lastAutoTable.finalY + 15;
   
-  // Calculs corrects
+  // Calculs corrects - les prix sont stockés en TTC
   const realSubtotalHT = items.reduce((sum: number, item: InvoiceItem) => {
     return sum + ((item.unitPrice / 1.19) * item.quantity);
   }, 0);
