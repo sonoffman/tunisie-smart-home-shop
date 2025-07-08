@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Download, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { generateInvoicePdf } from '@/components/invoice/InvoicePdfGenerator';
+import { generateInvoicePDF } from '@/components/invoice/InvoicePdfGenerator';
 import { Json } from '@/integrations/supabase/types';
 import { InvoiceItem } from '@/types/supabase';
 
@@ -168,17 +167,14 @@ const InvoiceDetail = () => {
     try {
       const items = parseInvoiceItems(invoice.items);
       
-      const pdf = generateInvoicePdf({
-        invoiceNumber: invoice.invoice_number,
-        invoiceDate: invoice.invoice_date,
-        customer: customer,
-        items: items,
-        taxes: {
-          subtotalHT: invoice.subtotal_ht,
-          tva: invoice.tva,
-          timbreFiscal: invoice.timbre_fiscal,
-          totalTTC: invoice.total_ttc
-        }
+      const invoiceForPdf = {
+        ...invoice,
+        items: items
+      };
+
+      const pdf = generateInvoicePDF(invoiceForPdf, customer, {
+        documentType: (invoice.document_type as 'Facture' | 'Devis' | 'Bon de Livraison') || 'Facture',
+        footerMessage: 'Merci de votre confiance'
       });
 
       pdf.output('dataurlnewwindow');
@@ -205,17 +201,14 @@ const InvoiceDetail = () => {
     try {
       const items = parseInvoiceItems(invoice.items);
       
-      const pdf = generateInvoicePdf({
-        invoiceNumber: invoice.invoice_number,
-        invoiceDate: invoice.invoice_date,
-        customer: customer,
-        items: items,
-        taxes: {
-          subtotalHT: invoice.subtotal_ht,
-          tva: invoice.tva,
-          timbreFiscal: invoice.timbre_fiscal,
-          totalTTC: invoice.total_ttc
-        }
+      const invoiceForPdf = {
+        ...invoice,
+        items: items
+      };
+
+      const pdf = generateInvoicePDF(invoiceForPdf, customer, {
+        documentType: (invoice.document_type as 'Facture' | 'Devis' | 'Bon de Livraison') || 'Facture',
+        footerMessage: 'Merci de votre confiance'
       });
 
       pdf.save(`facture-${invoice.invoice_number}.pdf`);

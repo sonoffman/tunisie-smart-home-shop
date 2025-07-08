@@ -17,13 +17,13 @@ export const generateInvoicePDF = (
   const pageWidth = doc.internal.pageSize.width;
   const margin = 20;
 
-  // Configuration des couleurs
-  const primaryColor = [41, 128, 185]; // Bleu professionnel
-  const secondaryColor = [52, 73, 94]; // Gris foncé
-  const lightGray = [236, 240, 241];
+  // Configuration des couleurs (as tuples)
+  const primaryColor: [number, number, number] = [41, 128, 185]; // Bleu professionnel
+  const secondaryColor: [number, number, number] = [52, 73, 94]; // Gris foncé
+  const lightGray: [number, number, number] = [236, 240, 241];
 
   // En-tête avec logo et informations entreprise
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, pageWidth, 35, 'F');
   
   doc.setTextColor(255, 255, 255);
@@ -46,7 +46,7 @@ export const generateInvoicePDF = (
   });
 
   // Type de document et numéro
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text(parameters.documentType.toUpperCase(), margin, 55);
@@ -57,12 +57,12 @@ export const generateInvoicePDF = (
   doc.text(`Date: ${new Date(invoice.invoice_date).toLocaleDateString('fr-FR')}`, margin, 75);
 
   // Informations client (encadré)
-  doc.setFillColor(...lightGray);
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.rect(margin, 85, pageWidth - (2 * margin), 35, 'F');
-  doc.setDrawColor(...secondaryColor);
+  doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.rect(margin, 85, pageWidth - (2 * margin), 35);
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('FACTURÉ À:', margin + 5, 95);
@@ -164,13 +164,13 @@ export const generateInvoicePDF = (
     const messageY = (doc as any).lastAutoTable.finalY + 20;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
-    doc.setTextColor(...primaryColor);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
     doc.text(parameters.footerMessage, pageWidth / 2, messageY, { align: 'center' });
   }
 
   // Pied de page
   const footerY = doc.internal.pageSize.height - 30;
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, footerY, pageWidth, 30, 'F');
   
   doc.setTextColor(255, 255, 255);

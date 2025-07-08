@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,9 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Plus, ArrowLeft } from 'lucide-react';
-import { CustomerSelector } from '@/components/invoice/CustomerSelector';
-import { InvoiceItemList } from '@/components/invoice/InvoiceItemList';
-import { InvoiceSummary } from '@/components/invoice/InvoiceSummary';
+import CustomerSelector from '@/components/invoice/CustomerSelector';
+import InvoiceItemList from '@/components/invoice/InvoiceItemList';
+import InvoiceSummary from '@/components/invoice/InvoiceSummary';
 import { generateInvoicePDF } from '@/components/invoice/InvoicePdfGenerator';
 import InvoiceParametersDialog from '@/components/invoice/InvoiceParametersDialog';
 import { Customer, InvoiceItem } from '@/types/supabase';
@@ -157,8 +158,20 @@ const InvoiceGenerator = () => {
 
       if (error) throw error;
 
+      // Convertir les données pour le PDF
+      const invoiceForPdf = {
+        ...invoice,
+        items: items.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          total: item.unitPrice * item.quantity
+        }))
+      };
+
       // Générer le PDF avec les nouveaux paramètres
-      const doc = generateInvoicePDF(invoice, selectedCustomer, parameters);
+      const doc = generateInvoicePDF(invoiceForPdf, selectedCustomer, parameters);
       doc.save(`${parameters.documentType}_${parameters.invoiceNumber}.pdf`);
 
       toast({
@@ -182,6 +195,24 @@ const InvoiceGenerator = () => {
     }
   };
 
+  // Calculate totals for summary
+  const calculateTotals = () => {
+    const subtotalTTC = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const subtotalHT = subtotalTTC / 1.19;
+    const tva = subtotalHT * 0.19;
+    const timbreFiscal = 1;
+    const totalTTC = subtotalHT + tva + timbreFiscal;
+
+    return {
+      subtotalHT,
+      tva,
+      timbreFiscal,
+      totalTTC
+    };
+  };
+
+  const totals = calculateTotals();
+
   return (
     <Layout>
       <div className="container mx-auto py-8">
@@ -202,7 +233,11 @@ const InvoiceGenerator = () => {
             <CustomerSelector
               customers={customers}
               selectedCustomer={selectedCustomer}
-              onCustomerSelect={(customer) => setSelectedCustomer(customer)}
+              onCustomerChange={(customerId) => {
+                const customer = customers.find(c => c.id === customerId);
+                setSelectedCustomer(customer || null);
+              }}
+              onCustomerCreated={fetchCustomers}
             />
           </CardContent>
         </Card>
@@ -226,24 +261,34 @@ const InvoiceGenerator = () => {
             </div>
 
             <InvoiceItemList
-              items={items}
-              onItemChange={handleItemChange}
+              items={items.map(item => ({
+                id: item.id,
+                description: item.description,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                total: item.unitPrice * item.quantity
+              }))}
+              onAddItem={handleAddItem}
               onRemoveItem={handleRemoveItem}
+              onItemChange={handleItemChange}
             />
-
-            <Button
-              variant="secondary"
-              onClick={handleAddItem}
-              className="mt-4"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Ajouter un article
-            </Button>
           </CardContent>
         </Card>
 
         {selectedCustomer && items.length > 0 && (
-          <InvoiceSummary items={items} />
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Récapitulatif</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InvoiceSummary
+                subtotalHT={totals.subtotalHT}
+                tva={totals.tva}
+                timbreFiscal={totals.timbreFiscal}
+                totalTTC={totals.totalTTC}
+              />
+            </CardContent>
+          </Card>
         )}
         
         <div className="flex justify-end space-x-4">
