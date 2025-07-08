@@ -18,6 +18,7 @@ interface Invoice {
   invoice_number: string;
   customer_id: string;
   invoice_date: string;
+  document_type: string | null;
   items: Json;
   subtotal_ht: number;
   tva: number;
@@ -292,6 +293,9 @@ const InvoiceDetail = () => {
             <CardContent className="space-y-4">
               <div>
                 <span className="font-medium">Numéro:</span> {invoice.invoice_number}
+              </div>
+              <div>
+                <span className="font-medium">Type:</span> {invoice.document_type || 'Facture'}
               </div>
               <div>
                 <span className="font-medium">Date:</span> {format(new Date(invoice.invoice_date), 'PPP', { locale: fr })}
