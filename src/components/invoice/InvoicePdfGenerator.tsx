@@ -19,13 +19,13 @@ export const generateInvoicePDF = (
   const margin = 20;
 
   // Configuration des couleurs
-  const primaryColor = [41, 128, 185]; // Bleu professionnel
-  const secondaryColor = [52, 73, 94]; // Gris foncé
-  const lightGray = [236, 240, 241];
-  const accentColor = [46, 204, 113]; // Vert accent
+  const primaryColor = [41, 128, 185] as const; // Bleu professionnel
+  const secondaryColor = [52, 73, 94] as const; // Gris foncé
+  const lightGray = [236, 240, 241] as const;
+  const accentColor = [46, 204, 113] as const; // Vert accent
 
   // En-tête moderne avec dégradé
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, pageWidth, 40, 'F');
   
   // Ajout d'un effet de dégradé visuel avec une bande plus claire
@@ -55,29 +55,29 @@ export const generateInvoicePDF = (
   });
 
   // Type de document avec style moderne
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
   
   // Couleur spécifique selon le type de document
   if (parameters.documentType === 'Facture') {
-    doc.setTextColor(...primaryColor);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   } else if (parameters.documentType === 'Devis') {
     doc.setTextColor(243, 156, 18); // Orange
   } else {
-    doc.setTextColor(...accentColor);
+    doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
   }
   
   doc.text(parameters.documentType.toUpperCase(), margin, 60);
   
   // Numéro et date avec encadré stylé
-  doc.setFillColor(...lightGray);
+  doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.roundedRect(margin, 70, pageWidth - (2 * margin), 25, 3, 3, 'F');
-  doc.setDrawColor(...secondaryColor);
+  doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setLineWidth(0.5);
   doc.roundedRect(margin, 70, pageWidth - (2 * margin), 25, 3, 3, 'S');
   
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text(`N° ${invoice.invoice_number}`, margin + 5, 82);
@@ -86,12 +86,12 @@ export const generateInvoicePDF = (
   // Informations client avec design moderne
   doc.setFillColor(248, 249, 250);
   doc.roundedRect(margin, 105, pageWidth - (2 * margin), 40, 5, 5, 'F');
-  doc.setDrawColor(...primaryColor);
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setLineWidth(1);
   doc.roundedRect(margin, 105, pageWidth - (2 * margin), 40, 5, 5, 'S');
   
   // Titre client avec icône
-  doc.setTextColor(...primaryColor);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('👤 CLIENT', margin + 10, 118);
@@ -99,7 +99,7 @@ export const generateInvoicePDF = (
   // Informations client
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.setTextColor(...secondaryColor);
+  doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
   let clientY = 128;
   doc.text(customer.name, margin + 10, clientY);
   clientY += 5;
@@ -139,7 +139,7 @@ export const generateInvoicePDF = (
     body: tableData,
     theme: 'grid',
     headStyles: {
-      fillColor: primaryColor,
+      fillColor: [primaryColor[0], primaryColor[1], primaryColor[2]],
       textColor: 255,
       fontSize: 10,
       fontStyle: 'bold',
@@ -147,7 +147,7 @@ export const generateInvoicePDF = (
     },
     bodyStyles: {
       fontSize: 9,
-      textColor: secondaryColor
+      textColor: [secondaryColor[0], secondaryColor[1], secondaryColor[2]]
     },
     alternateRowStyles: {
       fillColor: [248, 249, 250]
@@ -190,7 +190,7 @@ export const generateInvoicePDF = (
   
   doc.setFillColor(248, 249, 250);
   doc.roundedRect(totalsX, finalY - 5, totalsWidth, 50, 3, 3, 'F');
-  doc.setDrawColor(...primaryColor);
+  doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setLineWidth(0.8);
   doc.roundedRect(totalsX, finalY - 5, totalsWidth, 50, 3, 3, 'S');
 
@@ -206,11 +206,11 @@ export const generateInvoicePDF = (
     doc.setFontSize(10);
     if (index === totalsData.length - 1) {
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...primaryColor);
+      doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
       doc.setFontSize(12);
     } else {
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...secondaryColor);
+      doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
     }
     
     doc.text(row[0], totalsX + 5, totalY, { align: 'left' });
@@ -221,7 +221,7 @@ export const generateInvoicePDF = (
   // Message personnalisé avec style
   if (parameters.footerMessage) {
     const messageY = finalY + 70;
-    doc.setFillColor(...accentColor);
+    doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
     doc.roundedRect(margin, messageY - 5, pageWidth - (2 * margin), 20, 3, 3, 'F');
     
     doc.setFontSize(12);
@@ -232,7 +232,7 @@ export const generateInvoicePDF = (
 
   // Pied de page moderne
   const footerY = pageHeight - 25;
-  doc.setFillColor(...primaryColor);
+  doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, footerY, pageWidth, 25, 'F');
   
   doc.setTextColor(255, 255, 255);
