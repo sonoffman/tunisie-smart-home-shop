@@ -20,16 +20,18 @@ const CategoryDropdown = () => {
 
   useEffect(() => {
     fetchCategories();
-    
-    // Mettre à jour le texte du bouton selon la route actuelle
+  }, []);
+
+  // Maintenir le bouton visible en permanence et mettre à jour le texte selon la route
+  useEffect(() => {
     const currentPath = location.pathname;
-    if (currentPath === '/') {
+    if (currentPath === '/' || currentPath === '/products') {
       setSelectedCategory('Toutes les catégories');
     } else if (currentPath.startsWith('/category/')) {
       const categorySlug = currentPath.split('/category/')[1];
       const category = categories.find(cat => cat.slug === categorySlug);
       if (category) {
-        setSelectedCategory(category.name);
+        setSelectedCategory(getCategoryDisplayName(category.name));
       }
     }
   }, [location.pathname, categories]);
@@ -48,15 +50,22 @@ const CategoryDropdown = () => {
     }
   };
 
-  const handleCategorySelect = (category: Category | null) => {
-    if (category) {
-      setSelectedCategory(category.name);
-      navigate(`/category/${category.slug}`);
-    } else {
-      setSelectedCategory('Toutes les catégories');
-      navigate('/');
-    }
-    setIsOpen(false);
+  // Fonction pour obtenir les noms français et icônes appropriées
+  const getCategoryDisplayName = (categoryName: string) => {
+    const name = categoryName.toLowerCase();
+    
+    // Mapping des noms vers du français clair
+    if (name.includes('switch') || name.includes('interrupteur')) return 'Interrupteurs';
+    if (name.includes('sensor') || name.includes('capteur')) return 'Capteurs';
+    if (name.includes('camera') || name.includes('caméra')) return 'Caméras';
+    if (name.includes('gateway') || name.includes('passerelle')) return 'Passerelles';
+    if (name.includes('accessoire') || name.includes('accessory')) return 'Accessoires';
+    if (name.includes('eclairage') || name.includes('lighting')) return 'Éclairage';
+    if (name.includes('securite') || name.includes('security')) return 'Sécurité';
+    if (name.includes('domotique') || name.includes('home automation')) return 'Domotique';
+    
+    // Retourner le nom original s'il est déjà en français
+    return categoryName;
   };
 
   const getCategoryIcon = (categoryName: string) => {
@@ -66,7 +75,21 @@ const CategoryDropdown = () => {
     if (name.includes('camera') || name.includes('caméra')) return '📷';
     if (name.includes('gateway') || name.includes('passerelle')) return '🌐';
     if (name.includes('accessoire') || name.includes('accessory')) return '🔧';
+    if (name.includes('eclairage') || name.includes('lighting')) return '💡';
+    if (name.includes('securite') || name.includes('security')) return '🛡️';
+    if (name.includes('domotique') || name.includes('home automation')) return '🏠';
     return '📦';
+  };
+
+  const handleCategorySelect = (category: Category | null) => {
+    if (category) {
+      setSelectedCategory(getCategoryDisplayName(category.name));
+      navigate(`/category/${category.slug}`);
+    } else {
+      setSelectedCategory('Toutes les catégories');
+      navigate('/products');
+    }
+    setIsOpen(false);
   };
 
   return (
@@ -76,7 +99,7 @@ const CategoryDropdown = () => {
         className="w-full flex items-center justify-between bg-white border border-gray-300 rounded-lg px-4 py-3 text-left shadow-sm hover:bg-gray-50 transition-colors"
       >
         <span className="flex items-center">
-          <span className="mr-2">{getCategoryIcon(selectedCategory)}</span>
+          <span className="mr-2">🏠</span>
           <span className="font-medium text-gray-900">{selectedCategory}</span>
         </span>
         <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -99,7 +122,7 @@ const CategoryDropdown = () => {
               className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center border-b border-gray-100 last:border-b-0"
             >
               <span className="mr-3">{getCategoryIcon(category.name)}</span>
-              <span className="font-medium">{category.name}</span>
+              <span className="font-medium">{getCategoryDisplayName(category.name)}</span>
             </button>
           ))}
         </div>

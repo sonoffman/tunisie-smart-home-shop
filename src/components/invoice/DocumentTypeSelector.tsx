@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface DocumentTypeSelectorProps {
   value: string;
@@ -16,18 +17,18 @@ interface DocumentTypeSelectorProps {
 
 const DocumentTypeSelector = ({ value, onChange, className }: DocumentTypeSelectorProps) => {
   const documentTypes = [
-    { value: 'Facture', label: 'Facture' },
-    { value: 'Devis', label: 'Devis' },
-    { value: 'Bon de Livraison', label: 'Bon de Livraison' }
+    { value: 'Facture', label: '📄 Facture' },
+    { value: 'Devis', label: '📝 Devis' },
+    { value: 'Bon de Livraison', label: '📦 Bon de Livraison' }
   ];
 
   return (
     <div className={className}>
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <Label className="block text-sm font-medium text-gray-700 mb-2">
         Type de document
-      </label>
+      </Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger className="w-full">
           <SelectValue placeholder="Sélectionner le type de document" />
         </SelectTrigger>
         <SelectContent>

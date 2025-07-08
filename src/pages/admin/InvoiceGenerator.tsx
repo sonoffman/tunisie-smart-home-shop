@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trash2, Plus, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText, Settings } from 'lucide-react';
 import CustomerSelector from '@/components/invoice/CustomerSelector';
 import InvoiceItemList from '@/components/invoice/InvoiceItemList';
 import InvoiceSummary from '@/components/invoice/InvoiceSummary';
@@ -48,6 +48,8 @@ const InvoiceGenerator = () => {
       });
     } else {
       fetchCustomers();
+      // Ajouter un article par défaut pour commencer
+      handleAddItem();
     }
   }, [user, isAdmin, navigate, toast]);
 
@@ -87,9 +89,18 @@ const InvoiceGenerator = () => {
 
   const handleItemChange = (id: string, field: string, value: string | number) => {
     setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
+      items.map((item) => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          // Recalculer le prix unitaire HT si on modifie le prix TTC
+          if (field === 'unitPrice') {
+            // La valeur entrée est en TTC, on stocke en HT
+            updatedItem.unitPrice = Number(value) / 1.19;
+          }
+          return updatedItem;
+        }
+        return item;
+      })
     );
   };
 
@@ -97,20 +108,51 @@ const InvoiceGenerator = () => {
     setSelectedCustomer(null);
     setItems([]);
     setInvoiceDate(new Date().toISOString().split('T')[0]);
+    // Ajouter un article par défaut
+    setTimeout(() => {
+      handleAddItem();
+    }, 100);
+  };
+
+  const generateDefaultInvoiceNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const time = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+    return `FAC-${year}${month}${day}-${time}`;
   };
 
   const handleGenerateInvoice = () => {
-    if (!selectedCustomer || items.length === 0) {
+    if (!selectedCustomer) {
       toast({
-        title: "Erreur",
-        description: "Veuillez sélectionner un client et ajouter au moins un article",
+        title: "Client requis",
+        description: "Veuillez sélectionner un client avant de continuer",
         variant: "destructive",
       });
       return;
     }
 
-    // Générer un numéro de facture par défaut
-    const defaultInvoiceNumber = `FAC-${Date.now()}`;
+    if (items.length === 0 || items.every(item => !item.description.trim())) {
+      toast({
+        title: "Articles requis",
+        description: "Veuillez ajouter au moins un article avec une description",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Vérifier que tous les articles ont une description et un prix
+    const invalidItems = items.filter(item => !item.description.trim() || item.unitPrice <= 0);
+    if (invalidItems.length > 0) {
+      toast({
+        title: "Articles incomplets",
+        description: "Tous les articles doivent avoir une description et un prix valide",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setShowParametersDialog(true);
   };
 
@@ -118,73 +160,81 @@ const InvoiceGenerator = () => {
     try {
       setSaving(true);
 
-      // Calculs corrects
+      // Calculs corrects (les prix sont stockés en HT)
       const realSubtotalHT = items.reduce((sum, item) => {
-        return sum + ((item.unitPrice / 1.19) * item.quantity);
+        return sum + (item.unitPrice * item.quantity);
       }, 0);
       
-      const totalTVA = items.reduce((sum, item) => {
-        const ht = item.unitPrice / 1.19;
-        const tva = item.unitPrice - ht;
-        return sum + (tva * item.quantity);
-      }, 0);
-      
+      const totalTVA = realSubtotalHT * 0.19;
       const timbreFiscal = 1; // Fixé à 1 DT
       const totalTTC = realSubtotalHT + totalTVA + timbreFiscal;
 
-      // Créer la facture avec les bons calculs
+      console.log('Calculs de facturation:', {
+        realSubtotalHT,
+        totalTVA,
+        timbreFiscal,
+        totalTTC
+      });
+
+      // Créer la facture dans la base de données
+      const invoiceData = {
+        customer_id: selectedCustomer!.id,
+        invoice_number: parameters.invoiceNumber,
+        invoice_date: invoiceDate,
+        document_type: parameters.documentType,
+        items: items.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice * 1.19, // Stocker en TTC pour la compatibilité
+          total: (item.unitPrice * 1.19) * item.quantity
+        })),
+        subtotal_ht: realSubtotalHT,
+        tva: totalTVA,
+        timbre_fiscal: timbreFiscal,
+        total_ttc: totalTTC,
+        created_by: user?.id
+      };
+
       const { data: invoice, error } = await supabase
         .from('invoices')
-        .insert({
-          customer_id: selectedCustomer.id,
-          invoice_number: parameters.invoiceNumber,
-          invoice_date: invoiceDate,
-          document_type: parameters.documentType,
-          items: items.map(item => ({
-            id: item.id,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            total: item.unitPrice * item.quantity
-          })),
-          subtotal_ht: realSubtotalHT,
-          tva: totalTVA,
-          timbre_fiscal: timbreFiscal,
-          total_ttc: totalTTC,
-          created_by: user?.id
-        })
+        .insert(invoiceData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur lors de la création de la facture:', error);
+        throw error;
+      }
 
-      // Convertir les données pour le PDF
+      console.log('Facture créée avec succès:', invoice);
+
+      // Convertir les données pour le PDF (utiliser les prix TTC pour l'affichage)
       const invoiceForPdf = {
         ...invoice,
         items: items.map(item => ({
           id: item.id,
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.unitPrice * item.quantity
+          unitPrice: item.unitPrice * 1.19, // Prix TTC pour l'affichage
+          total: (item.unitPrice * 1.19) * item.quantity
         }))
       };
 
-      // Générer le PDF avec les nouveaux paramètres
-      const doc = generateInvoicePDF(invoiceForPdf, selectedCustomer, parameters);
+      // Générer et télécharger le PDF
+      const doc = generateInvoicePDF(invoiceForPdf, selectedCustomer!, parameters);
       doc.save(`${parameters.documentType}_${parameters.invoiceNumber}.pdf`);
 
       toast({
-        title: "Succès",
-        description: `${parameters.documentType} générée avec succès`,
+        title: "Succès !",
+        description: `${parameters.documentType} générée et sauvegardée avec succès`,
       });
 
-      // Reset
-      setItems([]);
-      setSelectedCustomer(null);
-      setInvoiceDate(new Date().toISOString().split('T')[0]);
+      // Réinitialiser le formulaire
+      clearForm();
 
     } catch (error: any) {
+      console.error('Erreur lors de la génération:', error);
       toast({
         title: "Erreur",
         description: `Erreur lors de la génération: ${error.message}`,
@@ -195,10 +245,10 @@ const InvoiceGenerator = () => {
     }
   };
 
-  // Calculate totals for summary
+  // Calculer les totaux pour l'affichage
   const calculateTotals = () => {
-    const subtotalTTC = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const subtotalHT = subtotalTTC / 1.19;
+    // Les prix unitaires sont stockés en HT
+    const subtotalHT = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const tva = subtotalHT * 0.19;
     const timbreFiscal = 1;
     const totalTTC = subtotalHT + tva + timbreFiscal;
@@ -213,21 +263,31 @@ const InvoiceGenerator = () => {
 
   const totals = calculateTotals();
 
+  if (!user || !isAdmin) {
+    return null;
+  }
+
   return (
     <Layout>
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-sonoff-blue">
-            Générateur de Factures
-          </h1>
+          <div className="flex items-center gap-3">
+            <FileText className="h-8 w-8 text-sonoff-blue" />
+            <h1 className="text-3xl font-bold text-sonoff-blue">
+              Générateur de Documents
+            </h1>
+          </div>
           <Button variant="outline" onClick={() => navigate('/admin')}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Retour au dashboard
           </Button>
         </div>
 
-        <Card className="mb-8">
+        {/* Informations du client */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Informations du client</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              👤 Informations du client
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <CustomerSelector
@@ -242,43 +302,54 @@ const InvoiceGenerator = () => {
           </CardContent>
         </Card>
 
-        <Card className="mb-8">
+        {/* Détails du document */}
+        <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Détails de la facture</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              📋 Détails du document
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-4">
-              <Label htmlFor="invoiceDate" className="block text-sm font-medium text-gray-700">
-                Date de la facture
+            <div className="mb-6">
+              <Label htmlFor="invoiceDate" className="block text-sm font-medium text-gray-700 mb-2">
+                Date du document
               </Label>
               <Input
                 type="date"
                 id="invoiceDate"
                 value={invoiceDate}
                 onChange={(e) => setInvoiceDate(e.target.value)}
-                className="mt-1"
+                className="max-w-xs"
               />
             </div>
 
-            <InvoiceItemList
-              items={items.map(item => ({
-                id: item.id,
-                description: item.description,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                total: item.unitPrice * item.quantity
-              }))}
-              onAddItem={handleAddItem}
-              onRemoveItem={handleRemoveItem}
-              onItemChange={handleItemChange}
-            />
+            <div>
+              <Label className="block text-sm font-medium text-gray-700 mb-4">
+                Articles / Services
+              </Label>
+              <InvoiceItemList
+                items={items.map(item => ({
+                  id: item.id,
+                  description: item.description,
+                  quantity: item.quantity,
+                  unitPrice: item.unitPrice,
+                  total: item.unitPrice * item.quantity
+                }))}
+                onAddItem={handleAddItem}
+                onRemoveItem={handleRemoveItem}
+                onItemChange={handleItemChange}
+              />
+            </div>
           </CardContent>
         </Card>
 
-        {selectedCustomer && items.length > 0 && (
+        {/* Récapitulatif */}
+        {selectedCustomer && items.length > 0 && items.some(item => item.description.trim()) && (
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>Récapitulatif</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                🧮 Récapitulatif
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <InvoiceSummary
@@ -291,15 +362,17 @@ const InvoiceGenerator = () => {
           </Card>
         )}
         
+        {/* Actions */}
         <div className="flex justify-end space-x-4">
           <Button variant="outline" onClick={clearForm}>
-            Réinitialiser
+            🔄 Réinitialiser
           </Button>
           <Button 
             onClick={handleGenerateInvoice}
             disabled={!selectedCustomer || items.length === 0 || saving}
-            className="bg-sonoff-blue hover:bg-sonoff-teal"
+            className="bg-sonoff-blue hover:bg-sonoff-teal text-white flex items-center gap-2"
           >
+            <Settings className="h-4 w-4" />
             {saving ? 'Génération...' : 'Configurer et Générer'}
           </Button>
         </div>
@@ -309,7 +382,7 @@ const InvoiceGenerator = () => {
         open={showParametersDialog}
         onOpenChange={setShowParametersDialog}
         onConfirm={handleConfirmGeneration}
-        defaultInvoiceNumber={`FAC-${Date.now()}`}
+        defaultInvoiceNumber={generateDefaultInvoiceNumber()}
       />
     </Layout>
   );
