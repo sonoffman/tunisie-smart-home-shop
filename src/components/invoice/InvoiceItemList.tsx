@@ -14,15 +14,6 @@ interface InvoiceItemListProps {
 }
 
 const InvoiceItemList = ({ items, onAddItem, onRemoveItem, onItemChange }: InvoiceItemListProps) => {
-  
-  const calculateHT = (ttc: number): number => {
-    return ttc / 1.19; // Prix HT = Prix TTC / 1.19
-  };
-
-  const handlePriceChange = (id: string, ttcPrice: number) => {
-    const htPrice = calculateHT(ttcPrice);
-    onItemChange(id, 'unitPrice', htPrice);
-  };
 
   if (items.length === 0) {
     return (
@@ -38,71 +29,81 @@ const InvoiceItemList = ({ items, onAddItem, onRemoveItem, onItemChange }: Invoi
 
   return (
     <div className="space-y-4">
-      {items.map((item) => (
-        <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border rounded-lg">
-          <div className="col-span-5">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <Textarea
-              value={item.description}
-              onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
-              placeholder="Description du produit"
-              rows={2}
-            />
-          </div>
-          
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Quantité
-            </label>
-            <Input
-              type="number"
-              min="1"
-              value={item.quantity}
-              onChange={(e) => onItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
-            />
-          </div>
-          
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Prix TTC unitaire
-            </label>
-            <Input
-              type="number"
-              step="0.001"
-              value={(item.unitPrice * 1.19).toFixed(3)}
-              onChange={(e) => {
-                const ttcValue = parseFloat(e.target.value) || 0;
-                handlePriceChange(item.id, ttcValue);
-              }}
-            />
-          </div>
-          
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Total HT
-            </label>
-            <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium">
-              {item.total.toFixed(3)} DT
+      {items.map((item) => {
+        // Calculer le prix TTC à partir du prix HT
+        const prixTTC = item.unitPrice * 1.19;
+        const totalHT = item.unitPrice * item.quantity;
+        const totalTTC = prixTTC * item.quantity;
+
+        return (
+          <div key={item.id} className="grid grid-cols-12 gap-4 p-4 border rounded-lg">
+            <div className="col-span-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <Textarea
+                value={item.description}
+                onChange={(e) => onItemChange(item.id, 'description', e.target.value)}
+                placeholder="Description du produit"
+                rows={2}
+              />
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              TTC: {(item.total * 1.19).toFixed(3)} DT
+            
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Quantité
+              </label>
+              <Input
+                type="number"
+                min="1"
+                value={item.quantity}
+                onChange={(e) => onItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
+              />
+            </div>
+            
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Prix HT unitaire
+              </label>
+              <Input
+                type="number"
+                step="0.001"
+                value={item.unitPrice.toFixed(3)}
+                onChange={(e) => {
+                  const htValue = parseFloat(e.target.value) || 0;
+                  onItemChange(item.id, 'unitPrice', htValue);
+                }}
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                TTC: {prixTTC.toFixed(3)} DT
+              </div>
+            </div>
+            
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Total HT
+              </label>
+              <div className="px-3 py-2 bg-gray-50 rounded-md text-sm font-medium">
+                {totalHT.toFixed(3)} DT
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                TTC: {totalTTC.toFixed(3)} DT
+              </div>
+            </div>
+            
+            <div className="col-span-1 flex items-end">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onRemoveItem(item.id)}
+                className="w-full"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-          
-          <div className="col-span-1 flex items-end">
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => onRemoveItem(item.id)}
-              className="w-full"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       
       <Button onClick={onAddItem} variant="outline" className="w-full flex items-center gap-2">
         <Plus className="h-4 w-4" />

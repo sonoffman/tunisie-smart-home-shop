@@ -1,4 +1,3 @@
-
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Invoice, Customer, InvoiceItem } from '@/types/supabase';
@@ -117,11 +116,12 @@ export const generateInvoicePDF = (
   const tableStartY = 155;
   const items = Array.isArray(invoice.items) ? invoice.items : [];
   
-  // Calculs corrects - les prix sont stockés en TTC dans la base
+  // Calculs corrects - les prix sont stockés en HT dans la base
   const tableData = items.map((item: InvoiceItem) => {
-    const prixTTC = item.unitPrice; // Prix TTC stocké
-    const prixHT = prixTTC / 1.19; // Prix HT calculé
+    const prixHT = item.unitPrice; // Prix HT stocké
+    const prixTTC = prixHT * 1.19; // Prix TTC calculé
     const tvaUnitaire = prixTTC - prixHT; // TVA unitaire
+    const totalHT = prixHT * item.quantity; // Total HT
     const totalTTC = prixTTC * item.quantity; // Total TTC
     
     return [
@@ -171,19 +171,14 @@ export const generateInvoicePDF = (
   // Totaux avec design moderne
   const finalY = (doc as any).lastAutoTable.finalY + 15;
   
-  // Calculs corrects - les prix sont stockés en TTC
-  const realSubtotalHT = items.reduce((sum: number, item: InvoiceItem) => {
-    return sum + ((item.unitPrice / 1.19) * item.quantity);
+  // Calculs corrects - les prix sont stockés en HT
+  const subtotalHT = items.reduce((sum: number, item: InvoiceItem) => {
+    return sum + (item.unitPrice * item.quantity);
   }, 0);
   
-  const totalTVA = items.reduce((sum: number, item: InvoiceItem) => {
-    const ht = item.unitPrice / 1.19;
-    const tva = item.unitPrice - ht;
-    return sum + (tva * item.quantity);
-  }, 0);
-
+  const totalTVA = subtotalHT * 0.19;
   const timbreFiscal = 1.0; // Fixé à 1 DT
-  const totalTTC = realSubtotalHT + totalTVA + timbreFiscal;
+  const totalTTC = subtotalHT + totalTVA + timbreFiscal;
 
   // Encadré pour les totaux
   const totalsWidth = 80;
@@ -196,7 +191,7 @@ export const generateInvoicePDF = (
   doc.roundedRect(totalsX, finalY - 5, totalsWidth, 50, 3, 3, 'S');
 
   const totalsData = [
-    ['Sous-total HT:', `${realSubtotalHT.toFixed(3)} DT`],
+    ['Sous-total HT:', `${subtotalHT.toFixed(3)} DT`],
     ['TVA (19%):', `${totalTVA.toFixed(3)} DT`],
     ['Timbre fiscal:', `${timbreFiscal.toFixed(3)} DT`],
     ['TOTAL TTC:', `${totalTTC.toFixed(3)} DT`]

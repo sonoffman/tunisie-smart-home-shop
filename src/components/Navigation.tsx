@@ -13,12 +13,6 @@ const Navigation = () => {
     <nav className="hidden md:flex space-x-8">
       <CategoryDropdown />
       <Link 
-        to="/products" 
-        className="text-gray-700 hover:text-sonoff-blue transition-colors"
-      >
-        Tous les produits
-      </Link>
-      <Link 
         to="/verify-product" 
         className="text-gray-700 hover:text-sonoff-blue transition-colors"
       >

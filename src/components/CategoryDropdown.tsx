@@ -73,7 +73,7 @@ const CategoryDropdown = () => {
 
   const handleCategorySelect = (categorySlug: string) => {
     navigate(`/category/${categorySlug}`);
-    setIsOpen(false); // Fermer le dropdown mais ne pas masquer le bouton
+    setIsOpen(false);
   };
 
   const handleAllProducts = () => {
@@ -86,14 +86,14 @@ const CategoryDropdown = () => {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="flex items-center gap-2 text-white hover:text-sonoff-teal hover:bg-white/10 transition-colors"
+          className="flex items-center gap-2 text-gray-700 hover:text-sonoff-blue transition-colors bg-transparent"
         >
           <Home className="h-4 w-4" />
           Catégories
           <ChevronDown className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64 bg-white shadow-lg border border-gray-200">
+      <DropdownMenuContent className="w-64 bg-white shadow-lg border border-gray-200 z-50">
         <DropdownMenuItem 
           onClick={handleAllProducts}
           className="flex items-center gap-3 px-4 py-3 hover:bg-sonoff-blue/10 cursor-pointer"

@@ -5,7 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import DocumentTypeSelector from './DocumentTypeSelector';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface InvoiceParameters {
   documentType: 'Facture' | 'Devis' | 'Bon de Livraison';
@@ -59,6 +65,12 @@ const InvoiceParametersDialog: React.FC<InvoiceParametersDialogProps> = ({
     setParameters(prev => ({ ...prev, invoiceNumber: newNumber }));
   };
 
+  const documentTypes = [
+    { value: 'Facture', label: '📄 Facture', icon: '📄' },
+    { value: 'Devis', label: '📝 Devis', icon: '📝' },
+    { value: 'Bon de Livraison', label: '📦 Bon de Livraison', icon: '📦' }
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -69,12 +81,29 @@ const InvoiceParametersDialog: React.FC<InvoiceParametersDialogProps> = ({
         </DialogHeader>
         
         <div className="space-y-6">
-          <DocumentTypeSelector
-            value={parameters.documentType}
-            onChange={(value: 'Facture' | 'Devis' | 'Bon de Livraison') =>
-              setParameters(prev => ({ ...prev, documentType: value }))
-            }
-          />
+          <div className="space-y-2">
+            <Label>Type de document</Label>
+            <Select 
+              value={parameters.documentType} 
+              onValueChange={(value: 'Facture' | 'Devis' | 'Bon de Livraison') =>
+                setParameters(prev => ({ ...prev, documentType: value }))
+              }
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Sélectionner le type de document" />
+              </SelectTrigger>
+              <SelectContent>
+                {documentTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    <div className="flex items-center gap-2">
+                      <span>{type.icon}</span>
+                      <span>{type.value}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="invoiceNumber">Numéro de document</Label>

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -154,24 +153,24 @@ const InvoiceGenerator = () => {
     try {
       setSaving(true);
 
-      // Calculs corrects - les prix entrés sont en TTC
-      const realSubtotalHT = items.reduce((sum, item) => {
-        return sum + ((item.unitPrice / 1.19) * item.quantity);
+      // Calculs corrects - les prix stockés sont en HT
+      const subtotalHT = items.reduce((sum, item) => {
+        return sum + (item.unitPrice * item.quantity);
       }, 0);
       
-      const totalTVA = realSubtotalHT * 0.19;
+      const totalTVA = subtotalHT * 0.19;
       const timbreFiscal = 1; // Fixé à 1 DT
-      const totalTTC = realSubtotalHT + totalTVA + timbreFiscal;
+      const totalTTC = subtotalHT + totalTVA + timbreFiscal;
 
       console.log('Calculs de facturation:', {
-        realSubtotalHT,
+        subtotalHT,
         totalTVA,
         timbreFiscal,
         totalTTC,
         itemsWithPrices: items.map(item => ({
           description: item.description,
-          prixTTC: item.unitPrice,
-          prixHT: item.unitPrice / 1.19,
+          prixHT: item.unitPrice,
+          prixTTC: item.unitPrice * 1.19,
           quantity: item.quantity
         }))
       });
@@ -186,10 +185,10 @@ const InvoiceGenerator = () => {
           id: item.id,
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice, // Stocker le prix TTC
+          unitPrice: item.unitPrice, // Stocker le prix HT
           total: item.unitPrice * item.quantity
         })),
-        subtotal_ht: realSubtotalHT,
+        subtotal_ht: subtotalHT,
         tva: totalTVA,
         timbre_fiscal: timbreFiscal,
         total_ttc: totalTTC,
@@ -216,7 +215,7 @@ const InvoiceGenerator = () => {
           id: item.id,
           description: item.description,
           quantity: item.quantity,
-          unitPrice: item.unitPrice, // Prix TTC
+          unitPrice: item.unitPrice, // Prix HT
           total: item.unitPrice * item.quantity
         }))
       };
@@ -247,9 +246,8 @@ const InvoiceGenerator = () => {
 
   // Calculer les totaux pour l'affichage
   const calculateTotals = () => {
-    // Les prix unitaires sont entrés en TTC
-    const subtotalTTC = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const subtotalHT = subtotalTTC / 1.19;
+    // Les prix unitaires sont stockés en HT
+    const subtotalHT = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const tva = subtotalHT * 0.19;
     const timbreFiscal = 1;
     const totalTTC = subtotalHT + tva + timbreFiscal;
