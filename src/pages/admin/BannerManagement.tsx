@@ -79,6 +79,7 @@ const BannerManagement = () => {
         throw error;
       }
     } catch (error: any) {
+      console.error('Storage bucket error:', error);
       toast({
         title: "Erreur",
         description: `Erreur lors de la vérification du bucket: ${error.message}`,
@@ -90,12 +91,19 @@ const BannerManagement = () => {
   const fetchBanners = async () => {
     try {
       setLoading(true);
+      console.log('Fetching banners...');
+      
       const { data, error } = await supabase
         .from('banner_accordion')
         .select('*')
         .order('ordre');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching banners:', error);
+        throw error;
+      }
+      
+      console.log('Banners fetched successfully:', data);
       
       if (data) {
         setBanners(data);
@@ -106,6 +114,7 @@ const BannerManagement = () => {
         }
       }
     } catch (error: any) {
+      console.error('Fetch banners error:', error);
       toast({
         title: "Erreur",
         description: `Impossible de charger les bannières: ${error.message}`,
@@ -119,6 +128,7 @@ const BannerManagement = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      console.log('File selected:', file.name, file.size);
       setSelectedFile(file);
       const fileUrl = URL.createObjectURL(file);
       setPreviewUrl(fileUrl);
@@ -143,10 +153,17 @@ const BannerManagement = () => {
   const handleSaveBanner = async () => {
     try {
       setSaving(true);
+      console.log('Starting banner save process...');
       
+      // Vérifier d'abord si l'utilisateur est admin
+      if (!isAdmin) {
+        throw new Error('Permissions insuffisantes - vous devez être administrateur');
+      }
+
       let imageUrl = bannerForm.image;
       
       if (selectedFile) {
+        console.log('Uploading file:', selectedFile.name);
         const fileName = `banner-${Date.now()}-${selectedFile.name.replace(/\s+/g, '-')}`;
         
         const { data: uploadData, error: uploadError } = await supabase.storage
@@ -156,11 +173,15 @@ const BannerManagement = () => {
             upsert: false
           });
           
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error(`Erreur upload: ${uploadError.message}`);
+        }
         
         if (uploadData) {
           const { data } = supabase.storage.from('banners').getPublicUrl(fileName);
           imageUrl = data.publicUrl;
+          console.log('File uploaded successfully, URL:', imageUrl);
         }
       }
       
@@ -174,8 +195,11 @@ const BannerManagement = () => {
         actif: bannerForm.actif,
       };
       
+      console.log('Banner data to save:', bannerData);
+      
       let result;
       if (bannerForm.id) {
+        console.log('Updating existing banner with ID:', bannerForm.id);
         const { data, error } = await supabase
           .from('banner_accordion')
           .update(bannerData)
@@ -185,7 +209,7 @@ const BannerManagement = () => {
           
         if (error) {
           console.error('Update error:', error);
-          throw error;
+          throw new Error(`Erreur mise à jour: ${error.message}`);
         }
         result = data;
         
@@ -194,6 +218,7 @@ const BannerManagement = () => {
           description: "La bannière a été mise à jour avec succès",
         });
       } else {
+        console.log('Creating new banner...');
         const { data, error } = await supabase
           .from('banner_accordion')
           .insert([bannerData])
@@ -202,7 +227,7 @@ const BannerManagement = () => {
           
         if (error) {
           console.error('Insert error:', error);
-          throw error;
+          throw new Error(`Erreur création: ${error.message}`);
         }
         result = data;
         
@@ -212,6 +237,7 @@ const BannerManagement = () => {
         });
       }
       
+      console.log('Banner saved successfully:', result);
       fetchBanners();
       clearForm();
     } catch (error: any) {
@@ -227,6 +253,7 @@ const BannerManagement = () => {
   };
 
   const handleEditBanner = (banner: BannerAccordion) => {
+    console.log('Editing banner:', banner);
     setBannerForm(banner);
     setPreviewUrl(banner.image);
     setSelectedFile(null);
@@ -235,14 +262,23 @@ const BannerManagement = () => {
   const handleDeleteBanner = async (id: string) => {
     try {
       setSaving(true);
+      console.log('Deleting banner with ID:', id);
+      
+      if (!isAdmin) {
+        throw new Error('Permissions insuffisantes - vous devez être administrateur');
+      }
       
       const { error: deleteError } = await supabase
         .from('banner_accordion')
         .delete()
         .eq('id', id);
         
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Delete error:', deleteError);
+        throw new Error(`Erreur suppression: ${deleteError.message}`);
+      }
       
+      console.log('Banner deleted successfully');
       toast({
         title: "Bannière supprimée",
         description: "La bannière a été supprimée avec succès",
@@ -254,6 +290,7 @@ const BannerManagement = () => {
         clearForm();
       }
     } catch (error: any) {
+      console.error('Delete banner error:', error);
       toast({
         title: "Erreur",
         description: `Impossible de supprimer la bannière: ${error.message}`,
@@ -427,7 +464,7 @@ const BannerManagement = () => {
                   <Button 
                     className="flex-1 bg-sonoff-blue hover:bg-sonoff-teal"
                     onClick={handleSaveBanner}
-                    disabled={saving || !previewUrl}
+                    disabled={saving || (!previewUrl && !bannerForm.image)}
                   >
                     <Save className="mr-2 h-4 w-4" />
                     {saving ? 'Enregistrement...' : 'Enregistrer'}

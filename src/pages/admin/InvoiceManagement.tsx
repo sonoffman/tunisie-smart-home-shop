@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -157,24 +156,30 @@ const InvoiceManagement = () => {
       // Convert order items to invoice items format with TTC to HT calculation
       const invoiceItems = orderItems.map(item => {
         const priceTTC = item.price; // Prix TTC depuis la commande
-        const priceHT = priceTTC / 1.19; // Prix HT (TTC / 1.19)
+        const priceHT = priceTTC / 1.19; // Convertir en HT
         const totalHT = priceHT * item.quantity;
         
         return {
           id: item.id,
           description: item.product_name,
           quantity: item.quantity,
-          unitPrice: priceHT, // Prix unitaire HT
-          unitPriceTTC: priceTTC, // Prix unitaire TTC
+          unitPrice: priceHT, // Stocker le prix HT
           total: totalHT // Total HT
         };
       });
 
-      // Calculate totals
+      // Calculs corrects basés sur les prix HT
       const subtotalHT = invoiceItems.reduce((sum, item) => sum + item.total, 0);
       const tva = subtotalHT * 0.19; // 19% TVA
-      const timbreFiscal = 1; // 1 DT comme demandé
+      const timbreFiscal = 1; // 1 DT fixe
       const totalTTC = subtotalHT + tva + timbreFiscal;
+
+      console.log('Calculs facture depuis commande:', {
+        subtotalHT: subtotalHT.toFixed(3),
+        tva: tva.toFixed(3),
+        timbreFiscal: timbreFiscal.toFixed(3),
+        totalTTC: totalTTC.toFixed(3)
+      });
 
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
@@ -188,7 +193,7 @@ const InvoiceManagement = () => {
           tva: tva,
           timbre_fiscal: timbreFiscal,
           total_ttc: totalTTC,
-          document_type: 'Facture', // Valeur par défaut
+          document_type: 'Facture',
           created_by: user?.id,
         })
         .select()

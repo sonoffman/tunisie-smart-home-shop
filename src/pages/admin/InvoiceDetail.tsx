@@ -67,7 +67,6 @@ const InvoiceDetail = () => {
     try {
       console.log('Fetching invoice with ID:', id);
       
-      // Fetch invoice with proper error handling
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .select('*')
@@ -99,7 +98,6 @@ const InvoiceDetail = () => {
       console.log('Invoice data fetched successfully:', invoiceData);
       setInvoice(invoiceData);
 
-      // Fetch customer if invoice exists
       if (invoiceData?.customer_id) {
         console.log('Fetching customer with ID:', invoiceData.customer_id);
         const { data: customerData, error: customerError } = await supabase
@@ -166,24 +164,32 @@ const InvoiceDetail = () => {
     }
 
     try {
+      console.log('Generating PDF preview...');
       const items = parseInvoiceItems(invoice.items);
+      console.log('Parsed items for PDF:', items);
       
       const invoiceForPdf = {
         ...invoice,
         items: items
       };
 
+      console.log('Invoice data for PDF:', invoiceForPdf);
+      console.log('Customer data for PDF:', customer);
+
       const pdf = generateInvoicePDF(invoiceForPdf, customer, {
         documentType: (invoice.document_type as 'Facture' | 'Devis' | 'Bon de Livraison') || 'Facture',
         footerMessage: 'Merci de votre confiance'
       });
 
-      pdf.output('dataurlnewwindow');
+      // Utiliser dataurlnewwindow pour ouvrir le PDF dans un nouvel onglet
+      const pdfOutput = pdf.output('dataurlnewwindow');
+      console.log('PDF preview generated successfully');
+      
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('Error generating PDF preview:', error);
       toast({
         title: "Erreur PDF",
-        description: "Impossible de générer le PDF",
+        description: "Impossible de générer l'aperçu PDF",
         variant: "destructive",
       });
     }
@@ -200,7 +206,9 @@ const InvoiceDetail = () => {
     }
 
     try {
+      console.log('Generating PDF download...');
       const items = parseInvoiceItems(invoice.items);
+      console.log('Parsed items for download:', items);
       
       const invoiceForPdf = {
         ...invoice,
@@ -212,7 +220,16 @@ const InvoiceDetail = () => {
         footerMessage: 'Merci de votre confiance'
       });
 
-      pdf.save(`facture-${invoice.invoice_number}.pdf`);
+      // Sauvegarder le PDF
+      const fileName = `${invoice.document_type || 'Facture'}-${invoice.invoice_number}.pdf`;
+      pdf.save(fileName);
+      console.log('PDF downloaded successfully as:', fileName);
+      
+      toast({
+        title: "Succès",
+        description: "PDF téléchargé avec succès",
+      });
+      
     } catch (error) {
       console.error('Error downloading PDF:', error);
       toast({
