@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -168,6 +169,16 @@ const InvoiceDetail = () => {
       const items = parseInvoiceItems(invoice.items);
       console.log('Parsed items for PDF:', items);
       
+      // Vérifier que les items sont valides
+      if (!items || items.length === 0) {
+        toast({
+          title: "Erreur",
+          description: "Aucun article trouvé dans la facture",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const invoiceForPdf = {
         ...invoice,
         items: items
@@ -181,15 +192,17 @@ const InvoiceDetail = () => {
         footerMessage: 'Merci de votre confiance'
       });
 
-      // Utiliser dataurlnewwindow pour ouvrir le PDF dans un nouvel onglet
-      const pdfOutput = pdf.output('dataurlnewwindow');
+      // Ouvrir le PDF dans un nouvel onglet
+      const pdfBlob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
       console.log('PDF preview generated successfully');
       
     } catch (error) {
       console.error('Error generating PDF preview:', error);
       toast({
         title: "Erreur PDF",
-        description: "Impossible de générer l'aperçu PDF",
+        description: `Impossible de générer l'aperçu PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
         variant: "destructive",
       });
     }
@@ -210,6 +223,16 @@ const InvoiceDetail = () => {
       const items = parseInvoiceItems(invoice.items);
       console.log('Parsed items for download:', items);
       
+      // Vérifier que les items sont valides
+      if (!items || items.length === 0) {
+        toast({
+          title: "Erreur",
+          description: "Aucun article trouvé dans la facture",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const invoiceForPdf = {
         ...invoice,
         items: items
@@ -234,7 +257,7 @@ const InvoiceDetail = () => {
       console.error('Error downloading PDF:', error);
       toast({
         title: "Erreur téléchargement",
-        description: "Impossible de télécharger le PDF",
+        description: `Impossible de télécharger le PDF: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
         variant: "destructive",
       });
     }

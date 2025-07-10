@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -129,6 +130,27 @@ const BannerManagement = () => {
     const file = e.target.files?.[0];
     if (file) {
       console.log('File selected:', file.name, file.size);
+      
+      // Vérifier la taille du fichier (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Fichier trop volumineux",
+          description: "La taille du fichier ne doit pas dépasser 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Type de fichier invalide",
+          description: "Veuillez sélectionner une image",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setSelectedFile(file);
       const fileUrl = URL.createObjectURL(file);
       setPreviewUrl(fileUrl);
@@ -155,16 +177,29 @@ const BannerManagement = () => {
       setSaving(true);
       console.log('Starting banner save process...');
       
-      // Vérifier d'abord si l'utilisateur est admin
-      if (!isAdmin) {
-        throw new Error('Permissions insuffisantes - vous devez être administrateur');
+      // Vérifier les champs obligatoires
+      if (!bannerForm.titre.trim()) {
+        toast({
+          title: "Erreur",
+          description: "Le titre est obligatoire",
+          variant: "destructive",
+        });
+        return;
       }
 
       let imageUrl = bannerForm.image;
       
       if (selectedFile) {
         console.log('Uploading file:', selectedFile.name);
-        const fileName = `banner-${Date.now()}-${selectedFile.name.replace(/\s+/g, '-')}`;
+        
+        // Nettoyer le nom de fichier
+        const cleanFileName = selectedFile.name
+          .replace(/[^a-zA-Z0-9.-]/g, '-')
+          .replace(/-+/g, '-');
+        
+        const fileName = `banner-${Date.now()}-${cleanFileName}`;
+        
+        console.log('Attempting to upload to banners bucket with filename:', fileName);
         
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('banners')
@@ -174,11 +209,43 @@ const BannerManagement = () => {
           });
           
         if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(`Erreur upload: ${uploadError.message}`);
-        }
-        
-        if (uploadData) {
+          console.error('Upload error details:', uploadError);
+          
+          // Essayer de créer le bucket s'il n'existe pas
+          if (uploadError.message.includes('The resource was not found')) {
+            console.log('Bucket not found, creating it...');
+            const { error: createError } = await supabase.storage.createBucket('banners', {
+              public: true,
+              fileSizeLimit: 1024 * 1024 * 10,
+            });
+            
+            if (createError) {
+              console.error('Error creating bucket:', createError);
+              throw new Error(`Impossible de créer le bucket: ${createError.message}`);
+            }
+            
+            // Réessayer l'upload
+            const { data: retryUploadData, error: retryUploadError } = await supabase.storage
+              .from('banners')
+              .upload(fileName, selectedFile, {
+                cacheControl: '3600',
+                upsert: false
+              });
+              
+            if (retryUploadError) {
+              console.error('Retry upload error:', retryUploadError);
+              throw new Error(`Erreur upload (tentative 2): ${retryUploadError.message}`);
+            }
+            
+            if (retryUploadData) {
+              const { data } = supabase.storage.from('banners').getPublicUrl(fileName);
+              imageUrl = data.publicUrl;
+              console.log('File uploaded successfully after bucket creation, URL:', imageUrl);
+            }
+          } else {
+            throw new Error(`Erreur upload: ${uploadError.message}`);
+          }
+        } else if (uploadData) {
           const { data } = supabase.storage.from('banners').getPublicUrl(fileName);
           imageUrl = data.publicUrl;
           console.log('File uploaded successfully, URL:', imageUrl);
@@ -186,11 +253,11 @@ const BannerManagement = () => {
       }
       
       const bannerData = {
-        titre: bannerForm.titre,
-        description: bannerForm.description,
+        titre: bannerForm.titre.trim(),
+        description: bannerForm.description?.trim() || '',
         image: imageUrl,
-        lien_bouton: bannerForm.lien_bouton,
-        texte_bouton: bannerForm.texte_bouton,
+        lien_bouton: bannerForm.lien_bouton?.trim() || '',
+        texte_bouton: bannerForm.texte_bouton?.trim() || 'Découvrir',
         ordre: bannerForm.ordre,
         actif: bannerForm.actif,
       };
@@ -238,7 +305,7 @@ const BannerManagement = () => {
       }
       
       console.log('Banner saved successfully:', result);
-      fetchBanners();
+      await fetchBanners();
       clearForm();
     } catch (error: any) {
       console.error('Save banner error:', error);
