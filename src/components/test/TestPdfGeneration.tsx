@@ -80,9 +80,18 @@ const TestPdfGeneration = () => {
 
       console.log('Invoice created successfully:', invoice);
 
-      // Générer le PDF
+      // Paramètres pour le PDF
+      const parameters = {
+        documentType: 'Facture' as const,
+        footerMessage: 'Merci pour votre confiance - Facture de test'
+      };
+
+      // Générer le PDF avec les 3 paramètres requis
       console.log('Generating PDF...');
-      const pdfBlob = await generateInvoicePDF(invoice, customer);
+      const pdfDoc = generateInvoicePDF(invoice, customer, parameters);
+      
+      // Convertir le document PDF en blob
+      const pdfBlob = pdfDoc.output('blob');
       
       // Télécharger le PDF
       const url = URL.createObjectURL(pdfBlob);
