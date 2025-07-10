@@ -6,6 +6,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateInvoicePDF } from '@/components/invoice/InvoicePdfGenerator';
 import { FileText, Download } from 'lucide-react';
+import { Invoice, Customer } from '@/types/supabase';
 
 const TestPdfGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,7 +68,7 @@ const TestPdfGeneration = () => {
 
       console.log('Creating test invoice:', testInvoice);
 
-      const { data: invoice, error: invoiceError } = await supabase
+      const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert([testInvoice])
         .select()
@@ -78,7 +79,13 @@ const TestPdfGeneration = () => {
         throw new Error(`Erreur création facture: ${invoiceError.message}`);
       }
 
-      console.log('Invoice created successfully:', invoice);
+      console.log('Invoice created successfully:', invoiceData);
+
+      // Convertir les données Supabase vers le type Invoice attendu
+      const invoice: Invoice = {
+        ...invoiceData,
+        items: invoiceData.items as any[] // Cast explicite pour corriger le typage
+      };
 
       // Paramètres pour le PDF
       const parameters = {
