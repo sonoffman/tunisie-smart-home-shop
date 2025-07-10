@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Index from '@/pages/Index';
@@ -64,7 +65,7 @@ const AppRoutes = () => {
       <Route path="/admin/invoices/:id" element={<InvoiceDetail />} />
       <Route path="/admin/serial-numbers" element={<SerialNumberManagement />} />
       <Route path="/admin/banners" element={<BannerManagement />} />
-      <Route path="/admin/test" element={<TestComponents />} />
+      <Route path="/admin/test-components" element={<TestComponents />} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
