@@ -83,8 +83,17 @@ const TestPdfGeneration = () => {
 
       // Convertir les données Supabase vers le type Invoice attendu
       const invoice: Invoice = {
-        ...invoiceData,
-        items: invoiceData.items as any[] // Cast explicite pour corriger le typage
+        id: invoiceData.id,
+        invoice_number: invoiceData.invoice_number,
+        customer_id: invoiceData.customer_id,
+        invoice_date: invoiceData.invoice_date,
+        items: Array.isArray(invoiceData.items) ? invoiceData.items : [],
+        subtotal_ht: invoiceData.subtotal_ht,
+        tva: invoiceData.tva,
+        timbre_fiscal: invoiceData.timbre_fiscal,
+        total_ttc: invoiceData.total_ttc,
+        created_at: invoiceData.created_at,
+        created_by: invoiceData.created_by || ''
       };
 
       // Paramètres pour le PDF
