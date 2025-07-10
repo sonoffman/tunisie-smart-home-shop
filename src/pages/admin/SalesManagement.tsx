@@ -25,6 +25,9 @@ import OrderActions from '@/components/sales/OrderActions';
 import StatusFilter from '@/components/sales/StatusFilter';
 import { Order, OrderItem } from '@/types/supabase';
 
+type OrderStatus = 'new' | 'pending' | 'validated' | 'cancelled' | 'processing' | 'shipped' | 'delivered';
+type StatusFilterType = 'all' | OrderStatus;
+
 const SalesManagement = () => {
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -35,7 +38,7 @@ const SalesManagement = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -62,7 +65,7 @@ const SalesManagement = () => {
 
       // Appliquer le filtre de statut si ce n'est pas "all"
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        query = query.eq('status', statusFilter as OrderStatus);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -395,7 +398,7 @@ const SalesManagement = () => {
           />
           <StatusFilter 
             value={statusFilter} 
-            onValueChange={setStatusFilter} 
+            onValueChange={(value) => setStatusFilter(value as StatusFilterType)} 
           />
         </div>
 
