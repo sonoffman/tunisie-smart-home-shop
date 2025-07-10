@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import OrderStatusSelector from '@/components/sales/OrderStatusSelector';
@@ -21,6 +22,7 @@ import OrderStateSelector from '@/components/sales/OrderStateSelector';
 import OrderDetailDialog from '@/components/sales/OrderDetailDialog';
 import DeleteOrderDialog from '@/components/sales/DeleteOrderDialog';
 import OrderActions from '@/components/sales/OrderActions';
+import StatusFilter from '@/components/sales/StatusFilter';
 import { Order, OrderItem } from '@/types/supabase';
 
 const SalesManagement = () => {
@@ -33,6 +35,8 @@ const SalesManagement = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (user === null || !isAdmin) {
@@ -47,15 +51,21 @@ const SalesManagement = () => {
     } else {
       fetchOrders();
     }
-  }, [user, isAdmin, navigate, toast]);
+  }, [user, isAdmin, navigate, toast, statusFilter]);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      // Appliquer le filtre de statut si ce n'est pas "all"
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -219,20 +229,33 @@ const SalesManagement = () => {
       const currentYear = new Date().getFullYear();
       const invoiceNumber = `INV-${currentYear}-${nextNumber.toString().padStart(3, '0')}`;
 
-      // Convert order items to invoice items format
-      const invoiceItems = orderItems.map(item => ({
-        id: item.id,
-        description: item.product_name,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        total: item.quantity * item.price
-      }));
+      // Convert order items to invoice items format with TTC to HT calculation
+      const invoiceItems = orderItems.map(item => {
+        const priceTTC = item.price; // Prix TTC depuis la commande
+        const priceHT = priceTTC / 1.19; // Convertir en HT
+        const totalHT = priceHT * item.quantity;
+        
+        return {
+          id: item.id,
+          description: item.product_name,
+          quantity: item.quantity,
+          unitPrice: priceHT, // Stocker le prix HT
+          total: totalHT // Total HT
+        };
+      });
 
-      // Calculate totals
+      // Calculs corrects basés sur les prix HT
       const subtotalHT = invoiceItems.reduce((sum, item) => sum + item.total, 0);
       const tva = subtotalHT * 0.19; // 19% TVA
-      const timbreFiscal = 0.6;
+      const timbreFiscal = 1; // 1 DT fixe
       const totalTTC = subtotalHT + tva + timbreFiscal;
+
+      console.log('Calculs facture depuis commande:', {
+        subtotalHT: subtotalHT.toFixed(3),
+        tva: tva.toFixed(3),
+        timbreFiscal: timbreFiscal.toFixed(3),
+        totalTTC: totalTTC.toFixed(3)
+      });
 
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabase
@@ -241,6 +264,7 @@ const SalesManagement = () => {
           invoice_number: invoiceNumber,
           customer_id: customer.id,
           invoice_date: new Date().toISOString().split('T')[0],
+          document_type: 'Facture',
           items: invoiceItems,
           subtotal_ht: subtotalHT,
           tva: tva,
@@ -336,6 +360,17 @@ const SalesManagement = () => {
     }
   };
 
+  // Filtrer les commandes selon le terme de recherche
+  const filteredOrders = orders.filter(order => {
+    if (searchTerm === '') return true;
+    
+    return (
+      order.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer_phone.includes(searchTerm) ||
+      order.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
+
   if (!user || !isAdmin) {
     return null;
   }
@@ -348,6 +383,20 @@ const SalesManagement = () => {
           <Button variant="outline" onClick={() => navigate('/admin')}>
             Retour au dashboard
           </Button>
+        </div>
+
+        {/* Filtres */}
+        <div className="mb-6 flex gap-4 items-center">
+          <Input
+            placeholder="Rechercher par nom, téléphone ou ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-xs"
+          />
+          <StatusFilter 
+            value={statusFilter} 
+            onValueChange={setStatusFilter} 
+          />
         </div>
 
         <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -368,12 +417,12 @@ const SalesManagement = () => {
                 <TableRow>
                   <TableCell colSpan={6} className="text-center">Chargement...</TableCell>
                 </TableRow>
-              ) : orders.length === 0 ? (
+              ) : filteredOrders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center">Aucune commande trouvée</TableCell>
                 </TableRow>
               ) : (
-                orders.map((order) => (
+                filteredOrders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell>{formatDate(order.created_at)}</TableCell>
                     <TableCell className="font-medium">{order.customer_name}</TableCell>

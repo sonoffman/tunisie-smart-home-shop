@@ -1,6 +1,6 @@
 
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { Invoice, Customer, InvoiceItem } from '@/types/supabase';
 
 interface InvoiceParameters {
@@ -161,7 +161,8 @@ export const generateInvoicePDF = (
       ];
     });
 
-    (doc as any).autoTable({
+    // Utiliser autoTable correctement importé
+    autoTable(doc, {
       startY: tableStartY,
       head: [['Désignation', 'Qté', 'Prix unit. HT', 'TVA unit.', 'Prix unit. TTC', 'Total TTC']],
       body: tableData,
