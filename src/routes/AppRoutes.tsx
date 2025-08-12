@@ -1,16 +1,13 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Index from '@/pages/Index';
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import Products from '@/pages/Products';
+import AllProducts from '@/pages/AllProducts';
 import ProductDetail from '@/pages/ProductDetail';
-import Categories from '@/pages/Categories';
-import CategoryDetail from '@/pages/CategoryDetail';
-import Contact from '@/pages/Contact';
-import TrainingRequestPage from '@/pages/TrainingRequestPage';
-import Verification from '@/pages/Verification';
+import CategoryPage from '@/pages/CategoryPage';
+import TrainingPage from '@/pages/TrainingPage';
+import VerifyProduct from '@/pages/VerifyProduct';
 import Profile from '@/pages/Profile';
+import NotFound from '@/pages/NotFound';
 import AdminDashboard from '@/pages/admin/AdminDashboard';
 import ProductManagement from '@/pages/admin/ProductManagement';
 import CategoryManagement from '@/pages/admin/CategoryManagement';
@@ -25,7 +22,7 @@ import UserManagement from '@/pages/admin/UserManagement';
 import TrainingManagement from '@/pages/admin/TrainingManagement';
 import ContactSubmissions from '@/pages/admin/ContactSubmissions';
 import SerialNumberManagement from '@/pages/admin/SerialNumberManagement';
-import TestComponents from '@/pages/TestComponents';
+import TestComponents from '@/pages/admin/TestComponents';
 import BannerManagement from '@/pages/admin/BannerManagement';
 import DebugPage from '@/pages/admin/DebugPage';
 
@@ -33,15 +30,11 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/products" element={<Products />} />
+      <Route path="/products" element={<AllProducts />} />
       <Route path="/products/:slug" element={<ProductDetail />} />
-      <Route path="/categories" element={<Categories />} />
-      <Route path="/categories/:slug" element={<CategoryDetail />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/training" element={<TrainingRequestPage />} />
-      <Route path="/verification" element={<Verification />} />
+      <Route path="/categories" element={<CategoryPage />} />
+      <Route path="/training" element={<TrainingPage />} />
+      <Route path="/verification" element={<VerifyProduct />} />
       <Route path="/profile" element={<Profile />} />
       
       {/* Admin Routes */}
@@ -63,7 +56,7 @@ const AppRoutes = () => {
       <Route path="/admin/debug" element={<DebugPage />} />
       <Route path="/admin/test-components" element={<TestComponents />} />
 
-      <Route path="*" element={<div>Page Not Found</div>} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
