@@ -513,6 +513,33 @@ export type Database = {
           },
         ]
       }
+      products_duplicate: {
+        Row: {
+          additional_images: Json | null
+          description: string | null
+          main_image_url: string | null
+          name: string
+          price: number
+          slug: string
+        }
+        Insert: {
+          additional_images?: Json | null
+          description?: string | null
+          main_image_url?: string | null
+          name: string
+          price: number
+          slug: string
+        }
+        Update: {
+          additional_images?: Json | null
+          description?: string | null
+          main_image_url?: string | null
+          name?: string
+          price?: number
+          slug?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           address: string | null
