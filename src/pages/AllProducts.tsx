@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import ProductGrid from '@/components/ProductGrid';
+import DynamicImageAccordion from '@/components/DynamicImageAccordion';
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
@@ -61,12 +62,19 @@ const AllProducts = () => {
 
   return (
     <Layout>
-      <div className="py-12">
+      {/* Bannière sous la section des produits */}
+      <div className="container mx-auto py-8">
         <ProductGrid 
           products={loading ? [] : products} 
           title="Tous les produits" 
           showAll={true}
         />
+        
+        {/* Bannière dynamique sous les produits */}
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold text-center mb-8">Découvrez nos gammes</h2>
+          <DynamicImageAccordion />
+        </div>
       </div>
     </Layout>
   );

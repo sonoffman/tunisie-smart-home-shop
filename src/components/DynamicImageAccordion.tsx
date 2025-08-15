@@ -97,12 +97,12 @@ const DynamicImageAccordion = () => {
       setCurrent(api.selectedScrollSnap());
     });
 
-    // Auto-scroll every 3 seconds
+    // Auto-scroll every 5 seconds (as requested)
     const interval = setInterval(() => {
       if (api && banners.length > 1) {
         api.scrollNext();
       }
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [api, banners.length]);
