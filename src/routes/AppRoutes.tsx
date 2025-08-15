@@ -25,6 +25,11 @@ import SerialNumberManagement from '@/pages/admin/SerialNumberManagement';
 import TestComponents from '@/pages/admin/TestComponents';
 import BannerManagement from '@/pages/admin/BannerManagement';
 import DebugPage from '@/pages/admin/DebugPage';
+import Blog from '@/pages/Blog';
+import About from '@/pages/About';
+import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
+import Shipping from '@/pages/Shipping';
 
 const AppRoutes = () => {
   return (
@@ -36,6 +41,12 @@ const AppRoutes = () => {
       <Route path="/produit/:slug" element={<ProductDetail />} />
       <Route path="/training" element={<TrainingPage />} />
       <Route path="/verification" element={<VerifyProduct />} />
+      <Route path="/verify-product" element={<VerifyProduct />} />
+      <Route path="/blog" element={<Blog />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/shipping" element={<Shipping />} />
       <Route path="/profile" element={<Profile />} />
       
       {/* Admin Routes */}

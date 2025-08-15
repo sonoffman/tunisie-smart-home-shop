@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Carousel,
   CarouselContent,
@@ -17,6 +18,7 @@ interface BannerAccordion {
   titre: string;
   description: string;
   image: string;
+  image_mobile: string | null;
   lien_bouton: string;
   texte_bouton: string;
   ordre: number;
@@ -28,6 +30,7 @@ const DynamicImageAccordion = () => {
   const [loading, setLoading] = useState(true);
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -138,7 +141,7 @@ const DynamicImageAccordion = () => {
               <div 
                 className="relative w-full h-96 overflow-hidden rounded-lg shadow-lg transition-all duration-500"
                 style={{
-                  backgroundImage: `url(${banner.image})`,
+                  backgroundImage: `url(${isMobile && banner.image_mobile ? banner.image_mobile : banner.image})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                 }}
