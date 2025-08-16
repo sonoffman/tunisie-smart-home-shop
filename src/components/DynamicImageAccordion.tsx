@@ -90,24 +90,45 @@ const DynamicImageAccordion = () => {
   }, []);
 
   useEffect(() => {
-    if (!api) {
+    if (!api || banners.length === 0) {
       return;
     }
 
-    setCurrent(api.selectedScrollSnap());
-
-    api.on("select", () => {
+    try {
       setCurrent(api.selectedScrollSnap());
-    });
 
-    // Auto-scroll every 5 seconds (as requested)
-    const interval = setInterval(() => {
-      if (api && banners.length > 1) {
-        api.scrollNext();
-      }
-    }, 5000);
+      const handleSelect = () => {
+        try {
+          setCurrent(api.selectedScrollSnap());
+        } catch (error) {
+          console.error('Error updating carousel current slide:', error);
+        }
+      };
 
-    return () => clearInterval(interval);
+      api.on("select", handleSelect);
+
+      // Auto-scroll every 5 seconds (as requested)
+      const interval = setInterval(() => {
+        try {
+          if (api && banners.length > 1) {
+            api.scrollNext();
+          }
+        } catch (error) {
+          console.error('Error auto-scrolling carousel:', error);
+        }
+      }, 5000);
+
+      return () => {
+        clearInterval(interval);
+        try {
+          api.off("select", handleSelect);
+        } catch (error) {
+          console.error('Error cleaning up carousel listeners:', error);
+        }
+      };
+    } catch (error) {
+      console.error('Error setting up carousel:', error);
+    }
   }, [api, banners.length]);
 
   if (loading) {
@@ -134,6 +155,7 @@ const DynamicImageAccordion = () => {
         className="w-full" 
         opts={{ align: "start", loop: true }}
         setApi={setApi}
+        onError={(error) => console.error('Carousel error:', error)}
       >
         <CarouselContent>
           {banners.map((banner, index) => (
@@ -188,7 +210,13 @@ const DynamicImageAccordion = () => {
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
                 index === current ? 'bg-sonoff-orange' : 'bg-gray-300'
               }`}
-              onClick={() => api?.scrollTo(index)}
+              onClick={() => {
+                try {
+                  api?.scrollTo(index);
+                } catch (error) {
+                  console.error('Error scrolling to slide:', error);
+                }
+              }}
             />
           ))}
         </div>
