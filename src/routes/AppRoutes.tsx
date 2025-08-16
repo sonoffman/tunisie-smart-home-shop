@@ -30,6 +30,10 @@ import About from '@/pages/About';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
 import Shipping from '@/pages/Shipping';
+import CheckoutPage from '@/pages/CheckoutPage';
+import CartPage from '@/pages/CartPage';
+import SearchResults from '@/pages/SearchResults';
+import CMSPage from '@/pages/CMSPage';
 
 const AppRoutes = () => {
   return (
@@ -47,6 +51,10 @@ const AppRoutes = () => {
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
       <Route path="/shipping" element={<Shipping />} />
+      <Route path="/checkout" element={<CheckoutPage />} />
+      <Route path="/cart" element={<CartPage />} />
+      <Route path="/search" element={<SearchResults />} />
+      <Route path="/cms/:slug" element={<CMSPage />} />
       <Route path="/profile" element={<Profile />} />
       
       {/* Admin Routes */}
