@@ -21,7 +21,7 @@ interface ProductData {
 }
 
 const ProductDetail = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug, id } = useParams<{ slug?: string; id?: string }>();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   const [product, setProduct] = useState<ProductData | null>(null);
@@ -34,20 +34,24 @@ const ProductDetail = () => {
   const { toast } = useToast();
   
   useEffect(() => {
-    if (slug) {
-      fetchProduct(slug);
+    if (slug || id) {
+      fetchProduct(slug || id!);
     }
-  }, [slug]);
+  }, [slug, id]);
 
-  const fetchProduct = async (productSlug: string) => {
+  const fetchProduct = async (identifier: string) => {
     try {
       setLoading(true);
+      
+      // Check if identifier is UUID (ID) or slug
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+      const queryField = isUUID ? 'id' : 'slug';
       
       // Simplified approach without explicit generic typing to avoid type inference issues
       const { data: productData, error: productError } = await supabase
         .from('products')
         .select('id, name, description, price, stock_quantity, main_image_url, additional_images, category_id, slug')
-        .eq('slug', productSlug)
+        .eq(queryField, identifier)
         .maybeSingle();
 
       if (productError) {
