@@ -48,7 +48,7 @@ const ProductDetail = () => {
         .from('products')
         .select('id, name, description, price, stock_quantity, main_image_url, additional_images, category_id, slug')
         .eq('slug', productSlug)
-        .single();
+        .maybeSingle();
 
       if (productError) {
         console.error("Error fetching product:", productError);
@@ -66,7 +66,7 @@ const ProductDetail = () => {
           .from('categories')
           .select('name')
           .eq('id', productData.category_id)
-          .single();
+          .maybeSingle();
         
         categoryName = categoryData?.name || '';
       }

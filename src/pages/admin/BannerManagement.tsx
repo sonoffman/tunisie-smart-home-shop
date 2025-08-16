@@ -17,6 +17,7 @@ interface BannerAccordion {
   titre: string;
   description: string;
   image: string;
+  image_mobile: string | null;
   lien_bouton: string;
   texte_bouton: string;
   ordre: number;
@@ -32,12 +33,15 @@ const BannerManagement = () => {
   const [saving, setSaving] = useState(false);
   const [banners, setBanners] = useState<BannerAccordion[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedMobileFile, setSelectedMobileFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mobilePreviewUrl, setMobilePreviewUrl] = useState<string | null>(null);
   const [bannerForm, setBannerForm] = useState({
     id: '',
     titre: '',
     description: '',
     image: '',
+    image_mobile: '',
     lien_bouton: '',
     texte_bouton: 'Découvrir',
     ordre: 0,
@@ -112,6 +116,7 @@ const BannerManagement = () => {
         if (data.length > 0) {
           setBannerForm(data[0]);
           setPreviewUrl(data[0].image);
+          setMobilePreviewUrl(data[0].image_mobile);
         }
       }
     } catch (error: any) {
@@ -157,6 +162,37 @@ const BannerManagement = () => {
     }
   };
 
+  const handleMobileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log('Mobile file selected:', file.name, file.size);
+      
+      // Vérifier la taille du fichier (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "Fichier trop volumineux",
+          description: "La taille du fichier ne doit pas dépasser 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Vérifier le type de fichier
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Type de fichier invalide",
+          description: "Veuillez sélectionner une image",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedMobileFile(file);
+      const fileUrl = URL.createObjectURL(file);
+      setMobilePreviewUrl(fileUrl);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setBannerForm({
@@ -188,6 +224,7 @@ const BannerManagement = () => {
       }
 
       let imageUrl = bannerForm.image;
+      let mobileImageUrl = bannerForm.image_mobile;
       
       if (selectedFile) {
         console.log('Uploading file:', selectedFile.name);
@@ -251,11 +288,41 @@ const BannerManagement = () => {
           console.log('File uploaded successfully, URL:', imageUrl);
         }
       }
+
+      if (selectedMobileFile) {
+        console.log('Uploading mobile file:', selectedMobileFile.name);
+        
+        // Nettoyer le nom de fichier
+        const cleanFileName = selectedMobileFile.name
+          .replace(/[^a-zA-Z0-9.-]/g, '-')
+          .replace(/-+/g, '-');
+        
+        const fileName = `banner-mobile-${Date.now()}-${cleanFileName}`;
+        
+        console.log('Attempting to upload mobile image to banners bucket with filename:', fileName);
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('banners')
+          .upload(fileName, selectedMobileFile, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (uploadError) {
+          console.error('Mobile upload error details:', uploadError);
+          throw new Error(`Erreur upload mobile: ${uploadError.message}`);
+        } else if (uploadData) {
+          const { data } = supabase.storage.from('banners').getPublicUrl(fileName);
+          mobileImageUrl = data.publicUrl;
+          console.log('Mobile file uploaded successfully, URL:', mobileImageUrl);
+        }
+      }
       
       const bannerData = {
         titre: bannerForm.titre.trim(),
         description: bannerForm.description?.trim() || '',
         image: imageUrl,
+        image_mobile: mobileImageUrl || null,
         lien_bouton: bannerForm.lien_bouton?.trim() || '',
         texte_bouton: bannerForm.texte_bouton?.trim() || 'Découvrir',
         ordre: bannerForm.ordre,
@@ -323,7 +390,9 @@ const BannerManagement = () => {
     console.log('Editing banner:', banner);
     setBannerForm(banner);
     setPreviewUrl(banner.image);
+    setMobilePreviewUrl(banner.image_mobile);
     setSelectedFile(null);
+    setSelectedMobileFile(null);
   };
 
   const handleDeleteBanner = async (id: string) => {
@@ -374,13 +443,16 @@ const BannerManagement = () => {
       titre: '',
       description: '',
       image: '',
+      image_mobile: '',
       lien_bouton: '',
       texte_bouton: 'Découvrir',
       ordre: banners.length + 1,
       actif: true,
     });
     setSelectedFile(null);
+    setSelectedMobileFile(null);
     setPreviewUrl(null);
+    setMobilePreviewUrl(null);
   };
 
   if (!user || !isAdmin) {
@@ -415,14 +487,14 @@ const BannerManagement = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">Image de la bannière</label>
+                  <label className="block text-sm font-medium text-gray-700">Image de la bannière (Desktop/Tablette)</label>
                   
                   <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
                     {previewUrl ? (
                       <div className="relative w-full">
                         <img 
                           src={previewUrl} 
-                          alt="Preview" 
+                          alt="Preview Desktop" 
                           className="w-full h-40 object-cover rounded-md" 
                         />
                         <button 
@@ -443,19 +515,69 @@ const BannerManagement = () => {
                       <div className="flex flex-col items-center">
                         <ImageIcon className="h-12 w-12 text-gray-400" />
                         <p className="mt-2 text-sm text-gray-500">
-                          Cliquez pour sélectionner une image
+                          Cliquez pour sélectionner une image (Desktop)
                         </p>
                       </div>
                     )}
                     
                     <label className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sonoff-blue hover:bg-sonoff-teal cursor-pointer">
                       <Upload className="mr-2 h-4 w-4" />
-                      Choisir une image
+                      Choisir une image (Desktop)
                       <input 
                         type="file" 
                         className="sr-only" 
                         accept="image/*"
                         onChange={handleFileChange}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Image de la bannière (Mobile)</label>
+                  
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+                    {mobilePreviewUrl ? (
+                      <div className="relative w-full">
+                        <img 
+                          src={mobilePreviewUrl} 
+                          alt="Preview Mobile" 
+                          className="w-full h-40 object-cover rounded-md" 
+                        />
+                        <button 
+                          className="absolute top-2 right-2 p-1 bg-red-500 rounded-full text-white"
+                          onClick={() => {
+                            setMobilePreviewUrl(null);
+                            setSelectedMobileFile(null);
+                            setBannerForm({
+                              ...bannerForm,
+                              image_mobile: '',
+                            });
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <ImageIcon className="h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-sm text-gray-500">
+                          Cliquez pour sélectionner une image (Mobile)
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Optionnel: si non fournie, l'image desktop sera utilisée
+                        </p>
+                      </div>
+                    )}
+                    
+                    <label className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sonoff-blue hover:bg-sonoff-teal cursor-pointer">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Choisir une image (Mobile)
+                      <input 
+                        type="file" 
+                        className="sr-only" 
+                        accept="image/*"
+                        onChange={handleMobileFileChange}
                       />
                     </label>
                   </div>
