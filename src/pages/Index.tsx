@@ -6,11 +6,19 @@ import DynamicImageAccordion from '@/components/DynamicImageAccordion';
 import { Product } from '@/types/product';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { useCMSContent } from '@/hooks/useCMSContent';
 
 const Index = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  // Hook pour récupérer le texte d'accueil depuis le CMS
+  const { title: welcomeTitle } = useCMSContent(
+    'welcome-message', 
+    'Bienvenue sur SONOFF Tunisie', 
+    ''
+  );
 
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
@@ -76,11 +84,8 @@ const Index = () => {
       
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold text-center mb-8">
-          Bienvenue sur SONOFF Tunisie
+          {welcomeTitle}
         </h1>
-        <p className="text-center text-gray-600 mb-12">
-          Votre boutique en ligne pour les produits SONOFF
-        </p>
 
         {/* Section Produits Phares */}
         <section className="mb-12">
