@@ -466,9 +466,12 @@ export type Database = {
           featured: boolean | null
           hidden: boolean | null
           id: string
+          indexable: boolean | null
           main_image_url: string | null
           name: string
           price: number
+          seo_description: string | null
+          seo_title: string | null
           serial_number_required: boolean | null
           slug: string
           stock_quantity: number
@@ -482,9 +485,12 @@ export type Database = {
           featured?: boolean | null
           hidden?: boolean | null
           id?: string
+          indexable?: boolean | null
           main_image_url?: string | null
           name: string
           price: number
+          seo_description?: string | null
+          seo_title?: string | null
           serial_number_required?: boolean | null
           slug: string
           stock_quantity?: number
@@ -498,9 +504,12 @@ export type Database = {
           featured?: boolean | null
           hidden?: boolean | null
           id?: string
+          indexable?: boolean | null
           main_image_url?: string | null
           name?: string
           price?: number
+          seo_description?: string | null
+          seo_title?: string | null
           serial_number_required?: boolean | null
           slug?: string
           stock_quantity?: number
@@ -673,6 +682,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clean_slug: {
+        Args: { input_text: string }
+        Returns: string
+      }
       get_user_role: {
         Args: { user_id: string }
         Returns: string
