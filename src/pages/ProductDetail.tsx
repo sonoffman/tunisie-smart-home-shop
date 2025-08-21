@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Layout from '@/components/Layout';
+import SEOHelmet from '@/components/SEOHelmet';
+import ProductJsonLd from '@/components/ProductJsonLd';
 import { Button } from '@/components/ui/button';
 import { ShoppingCart, Plus, Minus, ArrowRight, Phone, Mail } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
@@ -18,6 +20,8 @@ interface ProductData {
   imageUrl: string;
   category: string;
   slug: string;
+  seo_title?: string;
+  seo_description?: string;
 }
 
 const ProductDetail = () => {
@@ -50,8 +54,9 @@ const ProductDetail = () => {
       // Simplified approach without explicit generic typing to avoid type inference issues
       const { data: productData, error: productError } = await supabase
         .from('products')
-        .select('id, name, description, price, stock_quantity, main_image_url, additional_images, category_id, slug')
+        .select('id, name, description, price, stock_quantity, main_image_url, additional_images, category_id, slug, seo_title, seo_description, indexable')
         .eq(queryField, identifier)
+        .eq('indexable', true)
         .maybeSingle();
 
       if (productError) {
@@ -84,7 +89,9 @@ const ProductDetail = () => {
           stock: productData.stock_quantity,
           imageUrl: productData.main_image_url || "/placeholder.svg",
           category: categoryName,
-          slug: productData.slug
+          slug: productData.slug,
+          seo_title: productData.seo_title,
+          seo_description: productData.seo_description
         };
         
         setProduct(product);
@@ -180,6 +187,14 @@ const ProductDetail = () => {
 
   return (
     <Layout>
+      <SEOHelmet
+        title={product.seo_title || `${product.name} | Sonoff Tunisie`}
+        description={product.seo_description || `Découvrez ${product.name} chez Sonoff Tunisie. Livraison rapide en Tunisie.`}
+        canonical={`/produit/${product.slug}`}
+        ogImage={product.imageUrl}
+        ogType="product"
+      />
+      <ProductJsonLd product={product} />
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           {/* Images du produit */}

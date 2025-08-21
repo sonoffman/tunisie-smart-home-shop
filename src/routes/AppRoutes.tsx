@@ -24,6 +24,7 @@ import ContactSubmissions from '@/pages/admin/ContactSubmissions';
 import SerialNumberManagement from '@/pages/admin/SerialNumberManagement';
 import TestComponents from '@/pages/admin/TestComponents';
 import BannerManagement from '@/pages/admin/BannerManagement';
+import SEOManagement from '@/pages/admin/SEOManagement';
 import DebugPage from '@/pages/admin/DebugPage';
 import Blog from '@/pages/Blog';
 import About from '@/pages/About';
@@ -76,6 +77,7 @@ const AppRoutes = () => {
       <Route path="/admin/banners" element={<BannerManagement />} />
       <Route path="/admin/debug" element={<DebugPage />} />
       <Route path="/admin/test-components" element={<TestComponents />} />
+      <Route path="/admin/seo-management" element={<SEOManagement />} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>
