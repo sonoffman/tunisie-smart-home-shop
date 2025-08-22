@@ -46,18 +46,18 @@ const ProductGrid: React.FC<ProductGridProps> = ({
   };
 
   return (
-    <div className={`container mx-auto ${isMobile ? 'px-0' : 'px-4'}`}>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">{title}</h2>
+    <div className={isMobile ? 'w-full' : 'container mx-auto px-4'}>
+      <h2 className={`text-2xl font-bold text-gray-800 mb-6 ${isMobile ? 'px-3' : ''}`}>{title}</h2>
 
       {products.length === 0 ? (
-        <div className="text-center py-10">
+        <div className={`text-center py-10 ${isMobile ? 'px-3' : ''}`}>
           <p className="text-gray-500">Aucun produit trouvé</p>
         </div>
       ) : (
         <>
-          <div className={`grid gap-4 my-8 ${
+          <div className={`grid my-8 ${
             isMobile 
-              ? 'grid-cols-2 gap-2' 
+              ? 'grid-cols-2 gap-1 px-1' 
               : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6'
           }`}>
             {currentProducts.map((product) => (
