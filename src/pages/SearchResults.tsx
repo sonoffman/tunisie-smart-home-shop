@@ -43,7 +43,8 @@ const SearchResults = () => {
             imageUrl: product.main_image_url || '/placeholder.svg',
             category: product.categories?.name || 'Non catégorisé',
             description: product.description,
-            stock: product.stock_quantity
+            stock: product.stock_quantity,
+            slug: product.slug
           }));
           
           setProducts(formattedProducts);

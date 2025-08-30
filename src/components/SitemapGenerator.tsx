@@ -86,16 +86,8 @@ ${entries.map(entry => `  <url>
     }
   };
   
-  const downloadSitemap = () => {
-    const blob = new Blob([sitemap], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sitemap.xml';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const copySitemap = () => {
+    navigator.clipboard.writeText(sitemap);
   };
 
   return (
@@ -113,12 +105,17 @@ ${entries.map(entry => `  <url>
         
         {sitemap && (
           <div className="space-y-4">
-            <button
-              onClick={downloadSitemap}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-            >
-              Télécharger sitemap.xml
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={copySitemap}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Copier le sitemap
+              </button>
+              <div className="text-sm text-gray-600 flex items-center">
+                Utilisez le script: <code className="ml-1 bg-gray-200 px-2 py-1 rounded">npm run generate-sitemap</code>
+              </div>
+            </div>
             
             <div className="bg-gray-100 p-4 rounded max-h-96 overflow-y-auto">
               <pre className="text-sm">{sitemap}</pre>
