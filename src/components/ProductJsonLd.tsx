@@ -33,6 +33,7 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
       "@type": "Organization",
       "name": "Sonoff"
     },
+    "gtin13": product.id.replace(/-/g, '').substring(0, 13).padEnd(13, '0'),
     "offers": {
       "@type": "Offer",
       "price": product.price,
@@ -40,6 +41,8 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
       "availability": product.stock && product.stock > 0 
         ? "https://schema.org/InStock" 
         : "https://schema.org/OutOfStock",
+      "url": productUrl,
+      "priceValidUntil": "2026-12-31",
       "seller": {
         "@type": "Organization",
         "name": "Sonoff Tunisie",
