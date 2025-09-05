@@ -35,14 +35,14 @@ import CheckoutPage from '@/pages/CheckoutPage';
 import CartPage from '@/pages/CartPage';
 import SearchResults from '@/pages/SearchResults';
 import CMSPage from '@/pages/CMSPage';
+import ProductRedirect from '@/components/ProductRedirect';
 
 const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/products" element={<AllProducts />} />
-      <Route path="/products/:slug" element={<ProductDetail />} />
-      <Route path="/product/:id" element={<ProductDetail />} />
+      <Route path="/product/:id" element={<ProductRedirect />} />
       <Route path="/category/:slug" element={<CategoryPage />} />
       <Route path="/produit/:slug" element={<ProductDetail />} />
       <Route path="/training" element={<TrainingPage />} />

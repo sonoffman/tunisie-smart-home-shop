@@ -41,7 +41,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, isAdmin = false }) =
     ? product.name.substring(0, isMobile ? 30 : 50) + '...' 
     : product.name;
 
-  const productUrl = product.slug ? `/produit/${product.slug}` : `/product/${product.id}`;
+  const productUrl = `/produit/${product.slug}`;
 
   return (
     <div className={`product-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow ${

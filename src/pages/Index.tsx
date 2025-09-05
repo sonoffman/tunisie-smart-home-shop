@@ -45,16 +45,16 @@ const Index = () => {
         console.log('Featured products fetched:', products?.length || 0);
         
         if (products && products.length > 0) {
-          const formattedProducts: Product[] = products.map(product => ({
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            imageUrl: product.main_image_url || '/placeholder.svg',
-            category: product.categories?.name || 'Non catégorisé',
-            description: product.description,
-            stock: product.stock_quantity,
-            slug: product.slug
-          }));
+        const formattedProducts: Product[] = products.map(product => ({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          slug: product.slug,
+          imageUrl: product.main_image_url || '/placeholder.svg',
+          category: product.categories?.name || 'Non catégorisé',
+          description: product.description,
+          stock: product.stock_quantity
+        }));
           
           setFeaturedProducts(formattedProducts);
         } else {
