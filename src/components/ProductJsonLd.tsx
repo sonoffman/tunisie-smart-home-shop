@@ -42,7 +42,7 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
         ? "https://schema.org/InStock" 
         : "https://schema.org/OutOfStock",
       "url": productUrl,
-      "priceValidUntil": "2026-12-31",
+      "priceValidUntil": "2027-12-30",
       "seller": {
         "@type": "Organization",
         "name": "Sonoff Tunisie",
