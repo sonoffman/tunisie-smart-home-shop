@@ -124,7 +124,28 @@ async function generateSitemap() {
           priority: '0.7'
         });
       });
-      console.log(`✓ ${categories.length} catégories ajoutées au sitemap`);
+    console.log(`✓ ${categories.length} catégories ajoutées au sitemap`);
+    }
+
+    // Récupérer les articles de blog publiés
+    const { data: blogPosts, error: blogError } = await supabase
+      .from('blog_posts')
+      .select('slug, updated_at, published')
+      .eq('published', true)
+      .not('slug', 'is', null);
+
+    if (blogError) {
+      console.error('Erreur récupération articles blog:', blogError);
+    } else if (blogPosts) {
+      blogPosts.forEach(post => {
+        entries.push({
+          url: `${baseUrl}/blog/${post.slug}`,
+          lastmod: post.updated_at ? post.updated_at.split('T')[0] : new Date().toISOString().split('T')[0],
+          changefreq: 'monthly',
+          priority: '0.6'
+        });
+      });
+      console.log(`✓ ${blogPosts.length} articles de blog ajoutés au sitemap`);
     }
     
     // Générer le XML

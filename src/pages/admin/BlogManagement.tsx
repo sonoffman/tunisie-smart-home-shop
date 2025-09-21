@@ -150,26 +150,21 @@ const BlogManagement = () => {
       const file = e.target.files[0];
       setUploading(true);
       
-      // Check if storage bucket exists, if not create it
-      const { data: bucketData, error: bucketError } = await supabase
-        .storage.getBucket('blog-images');
-      
-      if (bucketError && bucketError.message.includes('does not exist')) {
-        await supabase.storage.createBucket('blog-images', { public: true });
-      }
+      // Use existing blog_images bucket
+      const bucketName = 'blog_images';
       
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${fileName}`;
       
       const { error: uploadError } = await supabase.storage
-        .from('blog-images')
+        .from(bucketName)
         .upload(filePath, file);
         
       if (uploadError) throw uploadError;
       
       const { data: urlData } = supabase.storage
-        .from('blog-images')
+        .from(bucketName)
         .getPublicUrl(filePath);
         
       setCurrentPost(prev => ({ 
