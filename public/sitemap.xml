@@ -2,15 +2,9 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://www.sonoff-tunisie.com</loc>
-    <lastmod>2025-01-24</lastmod>
+    <lastmod>2025-01-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://www.sonoff-tunisie.com/produits</loc>
-    <lastmod>2025-01-24</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.sonoff-tunisie.com/produit/carte-memoire-pour-ihost</loc>
@@ -481,62 +475,56 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/produit/variateur-intelligent-sonoff-d1</loc>
-    <lastmod>2025-05-27</lastmod>
+    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbbridge-pro-bridge-controleur-hub-zigbee-3-0</loc>
+    <lastmod>2025-09-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbbridge-u-ultra-pont-zigbee</loc>
-    <lastmod>2025-05-28</lastmod>
+    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbmini-l-intelligent-switch</loc>
+    <lastmod>2025-09-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbmini</loc>
-    <lastmod>2025-04-29</lastmod>
+    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbmini-l2-switch-extreme-zigbee</loc>
+    <lastmod>2025-09-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbmini-l2-extreme-neutre-non-requis-interrupteur-intelligent-zigbee</loc>
-    <lastmod>2025-05-18</lastmod>
+    <loc>https://www.sonoff-tunisie.com/produit/sonoff-zbmicro-zigbee-usb-smart-adaptor</loc>
+    <lastmod>2025-09-07</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/categorie/accessoires</loc>
-    <lastmod>2025-01-24</lastmod>
+    <loc>https://www.sonoff-tunisie.com/categorie/wifi</loc>
+    <lastmod>2025-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/categorie/ecran</loc>
-    <lastmod>2025-01-24</lastmod>
+    <loc>https://www.sonoff-tunisie.com/categorie/zigbee</loc>
+    <lastmod>2025-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/categorie/interrupteur</loc>
-    <lastmod>2025-01-24</lastmod>
+    <loc>https://www.sonoff-tunisie.com/categorie/screen</loc>
+    <lastmod>2025-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://www.sonoff-tunisie.com/categorie/module-wifi</loc>
-    <lastmod>2025-01-24</lastmod>
+    <loc>https://www.sonoff-tunisie.com/categorie/accessories</loc>
+    <lastmod>2025-01-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.sonoff-tunisie.com/categorie/module-zigbee</loc>
-    <lastmod>2025-01-24</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.sonoff-tunisie.com/blog/dual-r3-sonoff-update</loc>
-    <lastmod>2025-09-21</lastmod>
+    <lastmod>2025-01-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>

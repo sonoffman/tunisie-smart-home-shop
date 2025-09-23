@@ -21,13 +21,6 @@ async function generateSitemap() {
       priority: '1.0'
     });
     
-    entries.push({
-      url: `${baseUrl}/produits`,
-      lastmod: new Date().toISOString().split('T')[0],
-      changefreq: 'daily',
-      priority: '0.9'
-    });
-    
     // Récupérer tous les produits avec leurs informations de validation
     const { data: allProducts, error: allProductsError } = await supabase
       .from('products')

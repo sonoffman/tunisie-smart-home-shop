@@ -6,6 +6,7 @@ import ProductGrid from '@/components/ProductGrid';
 import { Product } from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import SEOHelmet from '@/components/SEOHelmet';
 
 // Map category IDs to display names (as fallback if DB lookup fails)
 const categoryNames: Record<string, string> = {
@@ -116,8 +117,15 @@ const CategoryPage = () => {
     fetchProducts();
   }, [slug, toast]);
 
+  const canonicalUrl = slug ? `/categorie/${slug}` : '/produits';
+
   return (
     <Layout>
+      <SEOHelmet
+        title={`${categoryName} | Sonoff Tunisie`}
+        description={`Découvrez notre sélection de ${categoryName.toLowerCase()} Sonoff en Tunisie. Livraison rapide et prix compétitifs.`}
+        canonical={canonicalUrl}
+      />
       <div className="py-12">
         <ProductGrid 
           products={loading ? [] : products} 
