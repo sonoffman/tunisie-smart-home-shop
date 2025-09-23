@@ -119,9 +119,37 @@ const CheckoutPage = () => {
         console.log(`Warning: Customer with phone ${data.phone} has unresolved issues`);
       }
 
+      // Envoyer l'email de notification automatiquement
+      try {
+        const orderNotificationData = {
+          id: orderData.id,
+          customer_name: data.fullName,
+          customer_phone: data.phone,
+          customer_address: data.address,
+          total_amount: totalAmount,
+          order_items: cartItems.map(item => ({
+            product_name: item.name,
+            quantity: item.quantity,
+            price: item.price
+          }))
+        };
+
+        const { error: emailError } = await supabase.functions.invoke('send-order-notification', {
+          body: orderNotificationData
+        });
+
+        if (emailError) {
+          console.error('Email notification failed:', emailError);
+          // Ne pas faire échouer la commande si l'email échoue
+        }
+      } catch (emailError) {
+        console.error('Email notification error:', emailError);
+        // Ne pas faire échouer la commande si l'email échoue
+      }
+
       toast({
         title: "Commande confirmée",
-        description: "Votre commande a été enregistrée avec succès",
+        description: "Votre commande a été enregistrée avec succès et une notification a été envoyée",
       });
 
       // Vider le panier

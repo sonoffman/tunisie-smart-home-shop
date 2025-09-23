@@ -1,4 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from "npm:resend@2.0.0";
+
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,15 +30,6 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const orderData: OrderData = await req.json();
     console.log("Sending order notification for order:", orderData.id);
-
-    // Configuration SMTP OVH
-    const smtpConfig = {
-      host: "ssl0.ovh.net",
-      port: 465,
-      secure: true,
-      user: Deno.env.get("OVH_SMTP_USER") || "contact@sonoff-tunisie.com",
-      pass: Deno.env.get("OVH_SMTP_PASS"),
-    };
 
     // Créer le contenu HTML de l'email
     const htmlContent = `
@@ -69,16 +63,13 @@ const handler = async (req: Request): Promise<Response> => {
       </p>
     `;
 
-    // Préparer le message email
-    const emailData = {
-      from: `"Sonoff Tunisie" <${smtpConfig.user}>`,
-      to: "hatem.benromdhane33@gmail.com",
+    // Utiliser Resend au lieu de SMTP direct
+    const emailResponse = await resend.emails.send({
+      from: "Sonoff Tunisie <onboarding@resend.dev>",
+      to: ["hatem.benromdhane33@gmail.com"],
       subject: "Nouvelle commande reçue ✅",
       html: htmlContent,
-    };
-
-    // Utiliser l'API SMTP via fetch car Deno ne supporte pas nodemailer directement
-    const emailResponse = await sendEmailViaSMTP(emailData, smtpConfig);
+    });
     
     console.log("Email sent successfully:", emailResponse);
 
@@ -102,34 +93,5 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Fonction pour envoyer l'email via une API SMTP externe
-async function sendEmailViaSMTP(emailData: any, smtpConfig: any) {
-  // Utilisation d'un service d'email ou API SMTP
-  // Pour simplifier, on utilise une approche basée sur fetch
-  
-  // Construction du message au format MIME
-  const boundary = "----WebKitFormBoundary" + Math.random().toString(36);
-  const mimeMessage = `
-Content-Type: multipart/alternative; boundary="${boundary}"
-From: ${emailData.from}
-To: ${emailData.to}
-Subject: ${emailData.subject}
-
---${boundary}
-Content-Type: text/html; charset=UTF-8
-
-${emailData.html}
-
---${boundary}--
-`;
-
-  // Pour cette implémentation, nous utilisons une approche simplifiée
-  // En production, vous pourriez utiliser un service comme SendGrid, Mailgun, etc.
-  console.log("Email would be sent with SMTP config:", { host: smtpConfig.host, user: smtpConfig.user });
-  console.log("Email content:", emailData);
-  
-  // Simuler l'envoi réussi
-  return { messageId: `simulated-${Date.now()}` };
-}
 
 serve(handler);
