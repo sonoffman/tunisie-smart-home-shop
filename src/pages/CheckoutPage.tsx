@@ -17,7 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 
 // Exposer temporairement pour la console
-(window as any).supabase = supa;
+(window as any).supabase = supabase;
 
 
 const checkoutSchema = z.object({
