@@ -16,8 +16,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 
 
-// Exposer temporairement pour la console
-(window as any).supabase = supabase;
+import { supabase } from '@/integrations/supabase/client';
+
+if (typeof window !== "undefined") {
+  // Expose supabase globally for console testing
+  (window as any).supabase = supabase;
+  console.log("supabase exposé dans window");
+}
+
 
 
 const checkoutSchema = z.object({
