@@ -46,6 +46,8 @@ const CheckoutPage = () => {
     setProcessing(true);
 
     try {
+      // 🔍 Log AVANT l’insert
+      console.log("➡️ Order payload envoyé:", orderPayload);
       // 1️⃣ Créer la commande dans orders
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
@@ -59,7 +61,8 @@ const CheckoutPage = () => {
         }])
         .select('id')
         .single();
-
+      // 🔍 Log APRÈS l’insert
+      console.log("✅ Résultat insert orders:", { orderData, orderError });
       if (orderError) throw orderError;
 
       // 2️⃣ Préparer les produits pour order_items
