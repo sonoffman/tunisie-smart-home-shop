@@ -9,6 +9,14 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { CartProvider } from "./contexts/CartContext";
 import AppRoutes from "./routes/AppRoutes";
 
+import { supabase } from '@/integrations/supabase/client';
+
+useEffect(() => {
+  (window as any).supabase = supabase;
+  console.log("Supabase exposé sur window:", window.supabase);
+}, []);
+
+
 const queryClient = new QueryClient();
 
 const App = () => (
