@@ -59,12 +59,11 @@ const CheckoutPage = () => {
         .single();
 
       if (orderError) throw orderError;
-      console.log("✅ Commande créée:", orderData);
 
       // 2️⃣ Préparer et insérer les produits dans order_items
       const orderItemsToInsert = cartItems.map(item => ({
         order_id: orderData.id,
-        product_id: item.id, // doit être un UUID réel
+        product_id: item.id, // UUID réel
         product_name: item.name,
         price: item.price,
         quantity: item.quantity
@@ -75,7 +74,6 @@ const CheckoutPage = () => {
         .insert(orderItemsToInsert);
 
       if (orderItemsError) throw orderItemsError;
-      console.log("✅ Items ajoutés:", orderItemsToInsert);
 
       // 3️⃣ Envoyer notification via fonction Supabase
       try {
@@ -93,7 +91,6 @@ const CheckoutPage = () => {
             }))
           }
         });
-        console.log("✅ Notification envoyée");
       } catch (e) {
         console.error("⚠️ Notification échouée:", e);
       }
@@ -118,6 +115,7 @@ const CheckoutPage = () => {
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold mb-8 text-sonoff-blue">Validation de la commande</h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Panier */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader><CardTitle>Résumé du panier</CardTitle></CardHeader>
@@ -137,6 +135,7 @@ const CheckoutPage = () => {
             </Card>
           </div>
 
+          {/* Formulaire client */}
           <div className="lg:col-span-1">
             <Card>
               <CardHeader><CardTitle>Infos client</CardTitle></CardHeader>
