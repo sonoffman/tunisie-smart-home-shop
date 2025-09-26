@@ -21,10 +21,7 @@ import { useState } from 'react';
 // Après
 import React, { useState, useEffect } from 'react';
 
-useEffect(() => {
-  console.log('Supabase:', supabase);
-  (window as any).supabase = supabase;
-}, []);
+
 
 
 
@@ -42,7 +39,10 @@ const CheckoutPage = () => {
   const { toast } = useToast();
   const { cartItems, totalAmount, clearCart } = useCart();
   const [processing, setProcessing] = useState(false);
-
+  useEffect(() => {
+  console.log('Supabase:', supabase);
+  (window as any).supabase = supabase;
+   }, []);
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: { fullName: '', phone: '', address: '' }
