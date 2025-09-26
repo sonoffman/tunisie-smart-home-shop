@@ -7,28 +7,23 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useCart } from '@/contexts/CartContext';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const checkoutSchema = z.object({
-  fullName: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
-  phone: z.string().min(8, "Le numéro de téléphone doit contenir au moins 8 chiffres"),
-  address: z.string().min(10, "L'adresse doit être complète (au moins 10 caractères)")
+  fullName: z.string().min(3),
+  phone: z.string().min(8),
+  address: z.string().min(10)
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
+
+const SUPABASE_URL = "https://ixurnulffowefnouwfcs.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4dXJudWxmZm93ZWZub3V3ZmNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzNDg2MTQsImV4cCI6MjA2MDkyNDYxNH0.7TJGUB7uo2oQTLFA762YGFKlPwu6-h5t-k6KjJqB8zg";
 
 const CheckoutPage = () => {
   const { user } = useAuth();
@@ -39,31 +34,18 @@ const CheckoutPage = () => {
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: {
-      fullName: '',
-      phone: '',
-      address: ''
-    }
+    defaultValues: { fullName: '', phone: '', address: '' }
   });
-
-  const handleContinueShopping = () => {
-    navigate('/');
-  };
 
   const onSubmit = async (data: CheckoutFormValues) => {
     if (cartItems.length === 0) {
-      toast({
-        title: "Erreur",
-        description: "Votre panier est vide",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Panier vide", variant: "destructive" });
       return;
     }
 
     setProcessing(true);
 
     try {
-      // 1️⃣ Construire la commande
       const orderPayload = {
         customer_name: data.fullName,
         customer_phone: data.phone,
@@ -73,36 +55,48 @@ const CheckoutPage = () => {
         user_id: user?.id ?? null
       };
 
-      console.log("➡️ Order payload envoyé:", orderPayload);
+      console.log("➡️ Création commande:", orderPayload);
 
-      // 2️⃣ Insérer dans orders
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert([orderPayload])
-        .select('id')
-        .single();
+      // 1️⃣ Créer commande via REST
+      const orderRes = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(orderPayload)
+      });
+      const orderDataArr = await orderRes.json();
+      if (!orderRes.ok || !orderDataArr[0]) throw new Error(JSON.stringify(orderDataArr));
+      const orderData = orderDataArr[0];
+      console.log("✅ Commande créée:", orderData);
 
-      if (orderError) throw orderError;
-
-      // 3️⃣ Préparer les produits pour order_items
-      const orderItemsToInsert = cartItems.map(item => ({
+      // 2️⃣ Ajouter items
+      const itemsPayload = cartItems.map(item => ({
         order_id: orderData.id,
-        product_id: item.id, // ⚠️ doit être UUID
+        product_id: item.id,
         product_name: item.name,
         price: item.price,
         quantity: item.quantity
       }));
 
-      console.log("➡️ Order items envoyés:", orderItemsToInsert);
+      const itemsRes = await fetch(`${SUPABASE_URL}/rest/v1/order_items`, {
+        method: 'POST',
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": "return=representation"
+        },
+        body: JSON.stringify(itemsPayload)
+      });
+      const itemsData = await itemsRes.json();
+      if (!itemsRes.ok) throw new Error(JSON.stringify(itemsData));
+      console.log("✅ Items ajoutés:", itemsData);
 
-      // 4️⃣ Insérer dans order_items
-      const { error: orderItemsError } = await supabase
-        .from('order_items')
-        .insert(orderItemsToInsert);
-
-      if (orderItemsError) throw orderItemsError;
-
-      // 5️⃣ Notification
+      // 3️⃣ Notification via fonction Supabase
       try {
         await supabase.functions.invoke('send-order-notification', {
           body: {
@@ -118,165 +112,61 @@ const CheckoutPage = () => {
             }))
           }
         });
-      } catch (emailError) {
-        console.error('Notification échouée:', emailError);
-      }
+      } catch (e) { console.error("Notification échouée:", e); }
 
-      // ✅ Succès
-      toast({
-        title: "Commande confirmée",
-        description: "Votre commande a été enregistrée avec succès 🎉",
-      });
-
+      toast({ title: "Commande réussie", description: "Votre commande a été enregistrée" });
       clearCart();
       navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: `Impossible de finaliser votre commande: ${error.message}`,
-        variant: "destructive",
-      });
-      console.error("❌ Erreur finale:", error);
-    } finally {
-      setProcessing(false);
-    }
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      console.error("❌ Erreur checkout:", err);
+    } finally { setProcessing(false); }
   };
 
   return (
     <Layout>
       <div className="container mx-auto py-8">
         <h1 className="text-3xl font-bold mb-8 text-sonoff-blue">Validation de la commande</h1>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Résumé panier */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader>
-                <CardTitle>Résumé du panier</CardTitle>
-                <CardDescription>
-                  {cartItems.length} article{cartItems.length > 1 ? 's' : ''} dans votre panier
-                </CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle>Résumé du panier</CardTitle></CardHeader>
               <CardContent>
-                {cartItems.length === 0 ? (
-                  <p className="text-center py-4">Votre panier est vide</p>
-                ) : (
-                  <div className="divide-y">
-                    {cartItems.map((item) => (
-                      <div key={item.id} className="py-4 flex items-center">
-                        <div className="h-16 w-16 rounded overflow-hidden mr-4">
-                          <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                        </div>
-                        <div className="flex-grow">
-                          <h3 className="font-medium">{item.name}</h3>
-                          <p className="text-sm text-gray-500">
-                            {item.quantity} x {item.price.toFixed(2)} TND
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} TND</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {cartItems.length === 0 ? <p>Panier vide</p> :
+                  cartItems.map(item => (
+                    <div key={item.id} className="flex justify-between py-2">
+                      <span>{item.name} x{item.quantity}</span>
+                      <span>{(item.price*item.quantity).toFixed(2)} TND</span>
+                    </div>
+                  ))
+                }
               </CardContent>
-              <CardFooter className="flex justify-between">
-                <span className="font-bold">Total</span>
-                <span className="font-bold text-xl">{totalAmount.toFixed(2)} TND</span>
+              <CardFooter className="flex justify-between font-bold">
+                <span>Total</span><span>{totalAmount.toFixed(2)} TND</span>
               </CardFooter>
             </Card>
           </div>
 
-          {/* Formulaire client */}
           <div className="lg:col-span-1">
             <Card>
-              <CardHeader>
-                <CardTitle>Informations client</CardTitle>
-                <CardDescription>
-                  Complétez vos informations pour finaliser la commande
-                </CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle>Infos client</CardTitle></CardHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                   <CardContent className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="fullName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nom complet *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Votre nom complet" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Téléphone *</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Votre numéro de téléphone" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="address"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Adresse de livraison *</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Votre adresse complète" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <FormField name="fullName" control={form.control} render={({field}) => (
+                      <FormItem><FormLabel>Nom complet</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                    <FormField name="phone" control={form.control} render={({field}) => (
+                      <FormItem><FormLabel>Téléphone</FormLabel><FormControl><Input {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
+                    <FormField name="address" control={form.control} render={({field}) => (
+                      <FormItem><FormLabel>Adresse</FormLabel><FormControl><Textarea {...field}/></FormControl><FormMessage/></FormItem>
+                    )}/>
                   </CardContent>
                   <CardFooter className="flex flex-col space-y-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            type="submit" 
-                            className="w-full bg-sonoff-blue hover:bg-sonoff-teal" 
-                            disabled={processing || cartItems.length === 0}
-                          >
-                            {processing ? 'Traitement...' : 'Finaliser la commande'}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Confirmer et enregistrer votre commande</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            className="w-full"
-                            onClick={handleContinueShopping}
-                          >
-                            Continuer mes achats
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Revenir à la page d'accueil</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    <Button type="submit" className="w-full bg-sonoff-blue" disabled={processing}>
+                      {processing ? "Traitement..." : "Finaliser la commande"}
+                    </Button>
                   </CardFooter>
                 </form>
               </Form>
