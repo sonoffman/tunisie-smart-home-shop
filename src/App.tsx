@@ -10,7 +10,7 @@ import { CartProvider } from "./contexts/CartContext";
 import AppRoutes from "./routes/AppRoutes";
 
 import { supabase } from '@/integrations/supabase/client';
-
+import React, { useState, useEffect } from 'react';
 import { useState, useEffect } from 'react';
 
 useEffect(() => {
