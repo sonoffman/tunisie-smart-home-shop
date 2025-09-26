@@ -11,6 +11,8 @@ import AppRoutes from "./routes/AppRoutes";
 
 import { supabase } from '@/integrations/supabase/client';
 
+import { useState, useEffect } from 'react';
+
 useEffect(() => {
   (window as any).supabase = supabase;
   console.log("Supabase exposé sur window:", window.supabase);
