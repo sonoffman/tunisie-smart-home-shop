@@ -15,9 +15,9 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 const checkoutSchema = z.object({
-  fullName: z.string().min(3),
-  phone: z.string().min(8),
-  address: z.string().min(10)
+  fullName: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
+  phone: z.string().min(8, "Le numéro de téléphone doit contenir au moins 8 chiffres"),
+  address: z.string().min(10, "L'adresse doit être complète (au moins 10 caractères)")
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
@@ -43,7 +43,7 @@ const CheckoutPage = () => {
     setProcessing(true);
 
     try {
-      // 1️⃣ Créer la commande
+      // 1️⃣ Créer la commande dans orders
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -52,7 +52,8 @@ const CheckoutPage = () => {
           customer_address: data.address,
           total_amount: totalAmount,
           status: 'new',
-          user_id: user?.id ?? null
+          user_id: user?.id ?? null, // clé pour anonymes
+          cancellation_reason: null // obligatoire si non-nullable
         }])
         .select('id')
         .single();
@@ -60,10 +61,10 @@ const CheckoutPage = () => {
       if (orderError) throw orderError;
       console.log("✅ Commande créée:", orderData);
 
-      // 2️⃣ Préparer et insérer les produits
+      // 2️⃣ Préparer et insérer les produits dans order_items
       const orderItemsToInsert = cartItems.map(item => ({
         order_id: orderData.id,
-        product_id: item.id,
+        product_id: item.id, // doit être un UUID réel
         product_name: item.name,
         price: item.price,
         quantity: item.quantity
@@ -76,7 +77,7 @@ const CheckoutPage = () => {
       if (orderItemsError) throw orderItemsError;
       console.log("✅ Items ajoutés:", orderItemsToInsert);
 
-      // 3️⃣ Notification via fonction Supabase
+      // 3️⃣ Envoyer notification via fonction Supabase
       try {
         await supabase.functions.invoke('send-order-notification', {
           body: {
@@ -101,9 +102,15 @@ const CheckoutPage = () => {
       clearCart();
       navigate('/');
     } catch (err: any) {
-      toast({ title: "Erreur", description: `Impossible de finaliser votre commande: ${err.message}`, variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: `Impossible de finaliser votre commande: ${err.message}`,
+        variant: "destructive"
+      });
       console.error("❌ Erreur checkout:", err);
-    } finally { setProcessing(false); }
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
