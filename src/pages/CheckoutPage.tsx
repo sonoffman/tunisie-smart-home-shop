@@ -16,8 +16,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 
 
 
-import { supabase } from '@/integrations/supabase/client';
-
 if (typeof window !== "undefined") {
   // Expose supabase globally for console testing
   (window as any).supabase = supabase;
