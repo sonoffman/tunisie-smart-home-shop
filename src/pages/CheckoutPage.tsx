@@ -14,7 +14,12 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-import { useEffect } from 'react';
+
+// Avant
+import { useState } from 'react';
+
+// Après
+import React, { useState, useEffect } from 'react';
 
 useEffect(() => {
   console.log('Supabase:', supabase);
