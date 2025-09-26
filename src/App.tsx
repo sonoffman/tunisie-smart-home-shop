@@ -10,13 +10,13 @@ import { CartProvider } from "./contexts/CartContext";
 import AppRoutes from "./routes/AppRoutes";
 
 import { supabase } from '@/integrations/supabase/client';
-import React, { useState, useEffect } from 'react';
-import { useState, useEffect } from 'react';
 
-useEffect(() => {
+// Exposer Supabase pour tests dans la console
+if (typeof window !== "undefined") {
   (window as any).supabase = supabase;
   console.log("Supabase exposé sur window:", window.supabase);
-}, []);
+}
+
 
 
 const queryClient = new QueryClient();
