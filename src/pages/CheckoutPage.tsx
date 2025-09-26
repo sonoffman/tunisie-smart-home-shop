@@ -64,23 +64,22 @@ const CheckoutPage = () => {
     setProcessing(true);
 
     try {
-      // Créer la commande
-      let orderQuery = {
+      // Créer la commande avec user_id explicite
+      const orderQuery = {
         customer_name: data.fullName,
         customer_phone: data.phone,
         customer_address: data.address,
         total_amount: totalAmount,
-        status: 'new'
-      } as any;
-      
-      // N'ajoutez user_id que si l'utilisateur est connecté et que son ID est de type UUID valide
-      if (user?.id && typeof user.id === 'string' && user.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-        orderQuery.user_id = user.id;
-      }
+        status: 'new' as const,
+        // user_id DOIT être explicitement défini: soit l'ID utilisateur soit NULL
+        user_id: (user?.id && typeof user.id === 'string' && user.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) 
+          ? user.id 
+          : null
+      };
       
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert([orderQuery])
+        .insert(orderQuery)
         .select('id')
         .single();
 
