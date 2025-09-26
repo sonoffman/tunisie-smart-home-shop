@@ -8,6 +8,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useCMSContent } from '@/hooks/useCMSContent';
 
+(window as any).supabase = supabase;
+
+
 const Index = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
