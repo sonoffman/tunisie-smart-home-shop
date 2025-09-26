@@ -14,10 +14,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-
-// Avant
-import { useState } from 'react';
-
 // Après
 import React, { useState, useEffect } from 'react';
 
@@ -43,6 +39,7 @@ const CheckoutPage = () => {
   console.log('Supabase:', supabase);
   (window as any).supabase = supabase;
    }, []);
+  
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: { fullName: '', phone: '', address: '' }
