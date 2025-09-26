@@ -79,7 +79,7 @@ const CheckoutPage = () => {
       
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert(orderQuery)
+        .insert([orderQuery])
         .select('id')
         .single();
 
