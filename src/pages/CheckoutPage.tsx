@@ -1,30 +1,36 @@
-//import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-import Layout from '@/components/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useCart } from '@/contexts/CartContext';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-
-// Après
-import React, { useState, useEffect } from 'react';
-
-
-
-
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useCart } from "@/contexts/CartContext";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 const checkoutSchema = z.object({
   fullName: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
   phone: z.string().min(8, "Le numéro de téléphone doit contenir au moins 8 chiffres"),
-  address: z.string().min(10, "L'adresse doit être complète (au moins 10 caractères)")
+  address: z.string().min(10, "L'adresse doit être complète (au moins 10 caractères)"),
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
@@ -35,89 +41,101 @@ const CheckoutPage = () => {
   const { toast } = useToast();
   const { cartItems, totalAmount, clearCart } = useCart();
   const [processing, setProcessing] = useState(false);
+  const [debugMessage, setDebugMessage] = useState<string | null>(null);
+
+  // Exposer Supabase dans la console navigateur
   useEffect(() => {
-  console.log('Supabase:', supabase);
-  (window as any).supabase = supabase;
-   }, []);
-  
+    console.log("Supabase client chargé:", supabase);
+    (window as any).supabase = supabase;
+  }, []);
+
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { fullName: '', phone: '', address: '' }
+    defaultValues: { fullName: "", phone: "", address: "" },
   });
 
-  const handleContinueShopping = () => navigate('/');
-
-  const onSubmit = async (data: CheckoutFormValues) => {
-    if (cartItems.length === 0) {
-      toast({ title: "Erreur", description: "Votre panier est vide", variant: "destructive" });
-      return;
-    }
-
-    setProcessing(true);
-
+  const handleCheckout = async (data: CheckoutFormValues) => {
     try {
-      // 1️⃣ Créer la commande dans orders
+      setProcessing(true);
+      setDebugMessage("⏳ Insertion de la commande en cours...");
+
+      // 1️⃣ Créer la commande
       const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          customer_name: data.fullName,
-          customer_phone: data.phone,
-          customer_address: data.address,
-          total_amount: totalAmount,
-          status: 'new',
-          user_id: user?.id ?? null // 👈 clé pour anonymes
-        }])
-        .select('id')
+        .from("orders")
+        .insert([
+          {
+            customer_name: data.fullName,
+            customer_phone: data.phone,
+            customer_address: data.address,
+            total_amount: totalAmount,
+            status: "new",
+            user_id: user?.id ?? null,
+            cancellation_reason: null,
+          },
+        ])
+        .select("id")
         .single();
+
+      console.log("Résultat insert orders:", { orderData, orderError });
 
       if (orderError) throw orderError;
 
-      // 2️⃣ Préparer les produits pour order_items
-      const orderItemsToInsert = cartItems.map(item => ({
+      setDebugMessage(`✅ Commande créée avec ID ${orderData.id}`);
+
+      // 2️⃣ Ajouter les produits liés à la commande
+      const orderItemsToInsert = cartItems.map((item) => ({
         order_id: orderData.id,
-        product_id: item.id,     // doit être un UUID réel
+        product_id: item.id,
         product_name: item.name,
         price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
       }));
 
       const { error: orderItemsError } = await supabase
-        .from('order_items')
+        .from("order_items")
         .insert(orderItemsToInsert);
+
+      console.log("Résultat insert order_items:", { orderItemsError });
 
       if (orderItemsError) throw orderItemsError;
 
-      // 3️⃣ Envoi de la notification via fonction Supabase
+      setDebugMessage("✅ Produits ajoutés à la commande");
+
+      // 3️⃣ Envoi notification
       try {
-        await supabase.functions.invoke('send-order-notification', {
+        await supabase.functions.invoke("send-order-notification", {
           body: {
             id: orderData.id,
             customer_name: data.fullName,
             customer_phone: data.phone,
             customer_address: data.address,
             total_amount: totalAmount,
-            order_items: cartItems.map(item => ({
+            order_items: cartItems.map((item) => ({
               product_name: item.name,
               quantity: item.quantity,
-              price: item.price
-            }))
-          }
+              price: item.price,
+            })),
+          },
         });
-      } catch (emailError) {
-        console.error('Notification échouée:', emailError);
+        setDebugMessage("✅ Notification envoyée");
+      } catch (notifyError) {
+        console.error("Erreur notification:", notifyError);
+        setDebugMessage("⚠️ Erreur lors de l'envoi de la notification");
       }
 
-      toast({
-        title: "Commande confirmée",
-        description: "Votre commande a été enregistrée avec succès et une notification a été envoyée",
-      });
-
+      // 4️⃣ Succès → vider panier + redirection
       clearCart();
-      navigate('/');
-    } catch (error: any) {
       toast({
-        title: "Erreur",
-        description: `Impossible de finaliser votre commande: ${error.message}`,
+        title: "Commande réussie ✅",
+        description: "Votre commande a été enregistrée avec succès.",
+      });
+      navigate("/");
+    } catch (err: any) {
+      console.error("Erreur finale checkout:", err);
+      setDebugMessage("❌ Erreur: " + (err.message || "Impossible de finaliser la commande"));
+      toast({
+        title: "Erreur ❌",
+        description: "Impossible de finaliser la commande.",
         variant: "destructive",
       });
     } finally {
@@ -127,91 +145,71 @@ const CheckoutPage = () => {
 
   return (
     <Layout>
-      <div className="container mx-auto py-8">
-        <h1 className="text-3xl font-bold mb-8 text-sonoff-blue">Validation de la commande</h1>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <Card className="max-w-lg mx-auto mt-10">
+        <CardHeader>
+          <CardTitle>Finaliser ma commande</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom complet</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Votre nom" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Order summary */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Résumé du panier</CardTitle>
-                <CardContent>
-                  {cartItems.length === 0 ? (
-                    <p className="text-center py-4">Votre panier est vide</p>
-                  ) : (
-                    <div className="divide-y">
-                      {cartItems.map(item => (
-                        <div key={item.id} className="py-4 flex items-center">
-                          <div className="h-16 w-16 rounded overflow-hidden mr-4">
-                            <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" />
-                          </div>
-                          <div className="flex-grow">
-                            <h3 className="font-medium">{item.name}</h3>
-                            <p className="text-sm text-gray-500">{item.quantity} x {item.price.toFixed(2)} TND</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} TND</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <span className="font-bold">Total</span>
-                  <span className="font-bold text-xl">{totalAmount.toFixed(2)} TND</span>
-                </CardFooter>
-              </CardHeader>
-            </Card>
-          </div>
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Téléphone</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Votre numéro de téléphone" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          {/* Customer form */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informations client</CardTitle>
-              </CardHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                  <CardContent className="space-y-4">
-                    <FormField control={form.control} name="fullName" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Nom complet *</FormLabel>
-                        <FormControl><Input placeholder="Votre nom complet" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={form.control} name="phone" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Téléphone *</FormLabel>
-                        <FormControl><Input placeholder="Votre numéro de téléphone" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={form.control} name="address" render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Adresse de livraison *</FormLabel>
-                        <FormControl><Textarea placeholder="Votre adresse complète" {...field} /></FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}/>
-                  </CardContent>
-                  <CardFooter className="flex flex-col space-y-2">
-                    <Button type="submit" className="w-full bg-sonoff-blue hover:bg-sonoff-teal" disabled={processing || cartItems.length === 0}>
-                      {processing ? 'Traitement...' : 'Finaliser la commande'}
-                    </Button>
-                    <Button type="button" variant="outline" className="w-full" onClick={handleContinueShopping}>
-                      Continuer mes achats
-                    </Button>
-                  </CardFooter>
-                </form>
-              </Form>
-            </Card>
-          </div>
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Adresse</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Votre adresse complète" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-        </div>
-      </div>
+              {debugMessage && (
+                <div className="p-2 text-sm rounded bg-gray-100 border">
+                  {debugMessage}
+                </div>
+              )}
+
+              <Button type="submit" className="w-full" disabled={processing}>
+                {processing ? "Enregistrement..." : "Finaliser la commande"}
+              </Button>
+            </form>
+          </Form>
+        </CardContent>
+        <CardFooter>
+          <p>Total : <strong>{totalAmount.toFixed(2)} TND</strong></p>
+        </CardFooter>
+      </Card>
     </Layout>
   );
 };
