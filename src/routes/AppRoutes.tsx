@@ -60,7 +60,8 @@ const AppRoutes = () => {
       <Route path="/search" element={<SearchResults />} />
       <Route path="/cms/:slug" element={<CMSPage />} />
       <Route path="/profile" element={<Profile />} />
-      
+      <Route path="/debug" element={<DebugPage />} />
+
       {/* Admin Routes */}
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/products" element={<ProductManagement />} />
