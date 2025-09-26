@@ -14,6 +14,12 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
+
+
+// Exposer temporairement pour la console
+(window as any).supabase = supabase;
+
+
 const checkoutSchema = z.object({
   fullName: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
   phone: z.string().min(8, "Le numéro de téléphone doit contenir au moins 8 chiffres"),
