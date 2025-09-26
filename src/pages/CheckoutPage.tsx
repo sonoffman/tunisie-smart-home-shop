@@ -7,7 +7,7 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCart } from '@/contexts/CartContext';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
@@ -21,9 +21,6 @@ const checkoutSchema = z.object({
 });
 
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
-
-const SUPABASE_URL = "https://ixurnulffowefnouwfcs.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml4dXJudWxmZm93ZWZub3V3ZmNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzNDg2MTQsImV4cCI6MjA2MDkyNDYxNH0.7TJGUB7uo2oQTLFA762YGFKlPwu6-h5t-k6KjJqB8zg";
 
 const CheckoutPage = () => {
   const { user } = useAuth();
@@ -39,42 +36,32 @@ const CheckoutPage = () => {
 
   const onSubmit = async (data: CheckoutFormValues) => {
     if (cartItems.length === 0) {
-      toast({ title: "Erreur", description: "Panier vide", variant: "destructive" });
+      toast({ title: "Erreur", description: "Votre panier est vide", variant: "destructive" });
       return;
     }
 
     setProcessing(true);
 
     try {
-      const orderPayload = {
-        customer_name: data.fullName,
-        customer_phone: data.phone,
-        customer_address: data.address,
-        total_amount: totalAmount,
-        status: 'new',
-        user_id: user?.id ?? null
-      };
+      // 1️⃣ Créer la commande
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          customer_name: data.fullName,
+          customer_phone: data.phone,
+          customer_address: data.address,
+          total_amount: totalAmount,
+          status: 'new',
+          user_id: user?.id ?? null
+        }])
+        .select('id')
+        .single();
 
-      console.log("➡️ Création commande:", orderPayload);
-
-      // 1️⃣ Créer commande via REST
-      const orderRes = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify(orderPayload)
-      });
-      const orderDataArr = await orderRes.json();
-      if (!orderRes.ok || !orderDataArr[0]) throw new Error(JSON.stringify(orderDataArr));
-      const orderData = orderDataArr[0];
+      if (orderError) throw orderError;
       console.log("✅ Commande créée:", orderData);
 
-      // 2️⃣ Ajouter items
-      const itemsPayload = cartItems.map(item => ({
+      // 2️⃣ Préparer et insérer les produits
+      const orderItemsToInsert = cartItems.map(item => ({
         order_id: orderData.id,
         product_id: item.id,
         product_name: item.name,
@@ -82,19 +69,12 @@ const CheckoutPage = () => {
         quantity: item.quantity
       }));
 
-      const itemsRes = await fetch(`${SUPABASE_URL}/rest/v1/order_items`, {
-        method: 'POST',
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": "return=representation"
-        },
-        body: JSON.stringify(itemsPayload)
-      });
-      const itemsData = await itemsRes.json();
-      if (!itemsRes.ok) throw new Error(JSON.stringify(itemsData));
-      console.log("✅ Items ajoutés:", itemsData);
+      const { error: orderItemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsToInsert);
+
+      if (orderItemsError) throw orderItemsError;
+      console.log("✅ Items ajoutés:", orderItemsToInsert);
 
       // 3️⃣ Notification via fonction Supabase
       try {
@@ -112,13 +92,16 @@ const CheckoutPage = () => {
             }))
           }
         });
-      } catch (e) { console.error("Notification échouée:", e); }
+        console.log("✅ Notification envoyée");
+      } catch (e) {
+        console.error("⚠️ Notification échouée:", e);
+      }
 
-      toast({ title: "Commande réussie", description: "Votre commande a été enregistrée" });
+      toast({ title: "Commande confirmée", description: "Votre commande a été enregistrée" });
       clearCart();
       navigate('/');
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      toast({ title: "Erreur", description: `Impossible de finaliser votre commande: ${err.message}`, variant: "destructive" });
       console.error("❌ Erreur checkout:", err);
     } finally { setProcessing(false); }
   };
@@ -132,7 +115,7 @@ const CheckoutPage = () => {
             <Card>
               <CardHeader><CardTitle>Résumé du panier</CardTitle></CardHeader>
               <CardContent>
-                {cartItems.length === 0 ? <p>Panier vide</p> :
+                {cartItems.length === 0 ? <p>Votre panier est vide</p> :
                   cartItems.map(item => (
                     <div key={item.id} className="flex justify-between py-2">
                       <span>{item.name} x{item.quantity}</span>
