@@ -72,7 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
     
     console.log("Email sent successfully:", emailResponse);
-
+    console.log("RESEND:", Deno.env.get("RESEND_API_KEY"));
     return new Response(JSON.stringify({ success: true, message: "Email sent successfully" }), {
       status: 200,
       headers: {
