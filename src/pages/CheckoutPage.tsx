@@ -110,49 +110,107 @@ const CheckoutPage = () => {
 
   return (
     <Layout>
-      <Card>
-        <CardHeader>
-          <CardTitle>Finaliser votre commande</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleCheckout)}>
-              <FormField name="fullName" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nom complet</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField name="phone" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField name="address" control={form.control} render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Adresse</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <CardFooter>
-                <Button type="submit" disabled={processing}>
-                  {processing ? "Processing..." : `Payer ${totalAmount.toFixed(2)} €`}
-                </Button>
-              </CardFooter>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <h1 className="text-3xl font-bold mb-8">Finaliser votre commande</h1>
+        
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Formulaire de commande */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Informations de livraison</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-6">
+                  <FormField name="fullName" control={form.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nom complet</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Votre nom complet" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  
+                  <FormField name="phone" control={form.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Téléphone</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="+216 XX XXX XXX" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  
+                  <FormField name="address" control={form.control} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Adresse de livraison</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Adresse complète avec ville et code postal" rows={4} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                  
+                  <Button type="submit" disabled={processing} className="w-full" size="lg">
+                    {processing ? "Traitement en cours..." : "Commander"}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+
+          {/* Résumé de commande */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Résumé de la commande</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="flex justify-between items-start pb-4 border-b">
+                      <div className="flex-1">
+                        <p className="font-medium">{item.name}</p>
+                        <p className="text-sm text-muted-foreground">Quantité: {item.quantity}</p>
+                      </div>
+                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} €</p>
+                    </div>
+                  ))}
+                  
+                  <div className="pt-4 space-y-2">
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total</span>
+                      <span>{totalAmount.toFixed(2)} €</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <div className="space-y-3 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">🚚</span>
+                    <div>
+                      <p className="font-medium">Livraison rapide</p>
+                      <p className="text-muted-foreground">Livraison sous 2-3 jours ouvrables</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">✅</span>
+                    <div>
+                      <p className="font-medium">Paiement sécurisé</p>
+                      <p className="text-muted-foreground">Paiement à la livraison</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 };
