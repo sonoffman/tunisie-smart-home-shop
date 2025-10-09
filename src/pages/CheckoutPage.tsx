@@ -179,12 +179,12 @@ const CheckoutPage = () => {
                         <p className="font-medium">{item.name}</p>
                         <p className="text-sm text-muted-foreground">Quantité: {item.quantity}</p>
                       </div>
-                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} €</p>
+                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} DT</p>
                     </div>
                   ))}
                   <div className="pt-4 flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>{totalAmount.toFixed(2)} €</span>
+                    <span>{totalAmount.toFixed(2)} DT</span>
                   </div>
                 </div>
               </CardContent>
