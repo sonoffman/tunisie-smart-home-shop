@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,14 +7,14 @@ import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCart } from '@/contexts/CartContext';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-// Exposer supabase pour debug dans console
+// Exposer supabase dans la console (utile pour debug)
 (window as any).supabase = supabase;
 
 const checkoutSchema = z.object({
@@ -46,7 +46,7 @@ const CheckoutPage = () => {
     setProcessing(true);
 
     try {
-      // 1️⃣ Créer la commande dans orders
+      // 1️⃣ Créer la commande dans la table orders
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -55,17 +55,17 @@ const CheckoutPage = () => {
           customer_address: data.address,
           total_amount: totalAmount,
           status: 'new',
-          user_id: user?.id ?? null // clé pour anonyme
+          user_id: user?.id ?? null
         }])
         .select('id')
         .single();
 
       if (orderError) throw orderError;
 
-      // 2️⃣ Préparer les produits pour order_items
+      // 2️⃣ Enregistrer les produits liés
       const orderItemsToInsert = cartItems.map(item => ({
         order_id: orderData.id,
-        product_id: item.id,  // doit être un UUID réel
+        product_id: item.id,
         product_name: item.name,
         price: item.price,
         quantity: item.quantity
@@ -77,9 +77,9 @@ const CheckoutPage = () => {
 
       if (orderItemsError) throw orderItemsError;
 
-      // 3️⃣ Envoi de la notification (facultatif)
+      // 3️⃣ Envoyer la notification de commande
       try {
-        await supabase.functions.invoke('send-order-notification', {
+        const { data: notifData, error: notifError } = await supabase.functions.invoke('send-order-notification', {
           body: {
             id: orderData.id,
             customer_name: data.fullName,
@@ -93,16 +93,25 @@ const CheckoutPage = () => {
             }))
           }
         });
+
+        if (notifError) {
+          console.error('Erreur notification :', notifError);
+          toast({ title: "Commande créée", description: "⚠️ Notification email échouée" });
+        } else {
+          console.log('Notification envoyée :', notifData);
+          toast({ title: "✅ Commande passée avec succès !" });
+        }
+
       } catch (emailError) {
-        console.error('Notification échouée:', emailError);
+        console.error('Erreur lors de l’envoi du mail :', emailError);
+        toast({ title: "Commande créée", description: "⚠️ Erreur d’envoi email" });
       }
 
-      toast({ title: "Commande passée avec succès !" });
       clearCart();
-      navigate('/'); // redirection après commande
+      navigate('/'); // Retour à l'accueil
     } catch (err: any) {
-      console.error('Erreur finalisation commande:', err);
-      toast({ title: "Impossible de finaliser votre commande", description: err.message });
+      console.error('Erreur finale checkout :', err);
+      toast({ title: "❌ Erreur lors du paiement", description: err.message });
     } finally {
       setProcessing(false);
     }
@@ -112,9 +121,9 @@ const CheckoutPage = () => {
     <Layout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <h1 className="text-3xl font-bold mb-8">Finaliser votre commande</h1>
-        
+
         <div className="grid lg:grid-cols-2 gap-8">
-          {/* Formulaire de commande */}
+          {/* Formulaire de livraison */}
           <Card>
             <CardHeader>
               <CardTitle>Informations de livraison</CardTitle>
@@ -122,36 +131,32 @@ const CheckoutPage = () => {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(handleCheckout)} className="space-y-6">
+                  
                   <FormField name="fullName" control={form.control} render={({ field }) => (
                     <FormItem>
                       <FormLabel>Nom complet</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Votre nom complet" />
-                      </FormControl>
+                      <FormControl><Input {...field} placeholder="Votre nom complet" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                  
+
                   <FormField name="phone" control={form.control} render={({ field }) => (
                     <FormItem>
                       <FormLabel>Téléphone</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="+216 XX XXX XXX" />
-                      </FormControl>
+                      <FormControl><Input {...field} placeholder="+216 XX XXX XXX" /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                  
+
                   <FormField name="address" control={form.control} render={({ field }) => (
                     <FormItem>
                       <FormLabel>Adresse de livraison</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} placeholder="Adresse complète avec ville et code postal" rows={4} />
-                      </FormControl>
+                      <FormControl><Textarea {...field} placeholder="Adresse complète (ville, code postal...)" rows={4} /></FormControl>
                       <FormMessage />
                     </FormItem>
                   )} />
-                  
+
+                  {/* 🟩 Bouton renommé */}
                   <Button type="submit" disabled={processing} className="w-full" size="lg">
                     {processing ? "Traitement en cours..." : "Commander"}
                   </Button>
@@ -177,12 +182,9 @@ const CheckoutPage = () => {
                       <p className="font-semibold">{(item.price * item.quantity).toFixed(2)} €</p>
                     </div>
                   ))}
-                  
-                  <div className="pt-4 space-y-2">
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Total</span>
-                      <span>{totalAmount.toFixed(2)} €</span>
-                    </div>
+                  <div className="pt-4 flex justify-between text-lg font-bold">
+                    <span>Total</span>
+                    <span>{totalAmount.toFixed(2)} €</span>
                   </div>
                 </div>
               </CardContent>
@@ -195,7 +197,7 @@ const CheckoutPage = () => {
                     <span className="text-lg">🚚</span>
                     <div>
                       <p className="font-medium">Livraison rapide</p>
-                      <p className="text-muted-foreground">Livraison sous 2-3 jours ouvrables</p>
+                      <p className="text-muted-foreground">Sous 2-3 jours ouvrables</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
