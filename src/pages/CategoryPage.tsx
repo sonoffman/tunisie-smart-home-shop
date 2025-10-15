@@ -25,6 +25,9 @@ const CategoryPage = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Scroll to top when category changes
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     const fetchProducts = async () => {
       setLoading(true);
       try {
