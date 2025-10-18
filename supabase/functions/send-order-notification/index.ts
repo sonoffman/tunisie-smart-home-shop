@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Utiliser Resend au lieu de SMTP direct
     const emailResponse = await resend.emails.send({
       from: "Sonoff Tunisie <onboarding@resend.dev>",
-      to: ["hatem.benromdhane33@gmail.com"],
+      to: ["kbirjosef@gmail.com"],
       subject: "Notification nouvelle commande",
       html: htmlContent,
     });
