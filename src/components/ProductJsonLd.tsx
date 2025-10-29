@@ -33,7 +33,6 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
       "@type": "Organization",
       "name": "Sonoff"
     },
-    "gtin13": product.id.replace(/-/g, '').substring(0, 13).padEnd(13, '0'),
     "offers": {
       "@type": "Offer",
       "price": product.price,
@@ -47,6 +46,40 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
         "@type": "Organization",
         "name": "Sonoff Tunisie",
         "url": baseUrl
+      },
+      "shippingDetails": {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "7.00",
+          "currency": "TND"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 0,
+            "maxValue": 1,
+            "unitCode": "DAY"
+          },
+          "transitTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 1,
+            "maxValue": 3,
+            "unitCode": "DAY"
+          }
+        },
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "TN"
+        }
+      },
+      "hasMerchantReturnPolicy": {
+        "@type": "MerchantReturnPolicy",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+        "merchantReturnDays": 7,
+        "returnMethod": "https://schema.org/ReturnByMail",
+        "returnFees": "https://schema.org/FreeReturn"
       }
     },
     "aggregateRating": {
