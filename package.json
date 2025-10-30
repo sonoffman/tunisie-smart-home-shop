@@ -12,7 +12,7 @@
 
     "prerender": "node scripts/prerender-lovable.js",
     "generate-sitemap": "node scripts/sitemap-generator.js",
-    "deploy": "npm run build && npm run prerender && npm run generate-sitemap"
+    "deploy": "npm run build && npm run prerender && npm run generate-sitemap",
     "notify-google": "node scripts/notify-google.js"
   },
   "dependencies": {
