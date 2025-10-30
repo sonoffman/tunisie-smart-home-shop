@@ -10,21 +10,32 @@ interface ProductJsonLdProps {
     imageUrl: string;
     slug: string;
     stock?: number;
+    gtin?: string;
   };
 }
 
 const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
   const baseUrl = 'https://www.sonoff-tunisie.com';
   const productUrl = `${baseUrl}/produit/${product.slug}`;
-  
+
+  // Google veut une date future dans priceValidUntil (max 1 an)
+  const priceValidUntil = new Date(
+    new Date().setFullYear(new Date().getFullYear() + 1)
+  )
+    .toISOString()
+    .split('T')[0];
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.name,
     "description": product.description,
-    "image": product.imageUrl.startsWith('http') ? product.imageUrl : `${baseUrl}${product.imageUrl}`,
+    "image": product.imageUrl.startsWith('http')
+      ? product.imageUrl
+      : `${baseUrl}${product.imageUrl}`,
     "url": productUrl,
     "sku": product.id,
+    ...(product.gtin && /^\d{13}$/.test(product.gtin) ? { "gtin13": product.gtin } : {}),
     "brand": {
       "@type": "Brand",
       "name": "Sonoff"
@@ -35,13 +46,13 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
     },
     "offers": {
       "@type": "Offer",
-      "price": product.price,
+      "price": product.price.toFixed(2),
       "priceCurrency": "TND",
-      "availability": product.stock && product.stock > 0 
-        ? "https://schema.org/InStock" 
+      "availability": product.stock && product.stock > 0
+        ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
       "url": productUrl,
-      "priceValidUntil": "2027-12-30",
+      "priceValidUntil": priceValidUntil,
       "seller": {
         "@type": "Organization",
         "name": "Sonoff Tunisie",
@@ -82,15 +93,16 @@ const ProductJsonLd: React.FC<ProductJsonLdProps> = ({ product }) => {
         "returnFees": "https://schema.org/FreeReturn"
       }
     },
+    // ⚙️ Valeurs SEO fixes (Google exige des reviewCount numériques)
     "aggregateRating": {
       "@type": "AggregateRating",
-      "ratingValue": "4.5",
-      "reviewCount": "10"
+      "ratingValue": 4.5,
+      "reviewCount": 10
     }
   };
 
   return (
-    <Helmet>
+    <Helmet prioritizeSeoTags>
       <script type="application/ld+json">
         {JSON.stringify(jsonLd)}
       </script>
