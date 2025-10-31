@@ -11,12 +11,33 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === 'development' &&
-    componentTagger(),
+    // Active le tagger uniquement en mode développement
+    mode === "development" && componentTagger(),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  build: {
+    // 👇 Nécessaire pour le pré-rendu : permet de retrouver le bon fichier JS
+    manifest: true,
+
+    // 👇 Recommandé pour les assets (ex : images, CSS, etc.)
+    outDir: "dist",
+    assetsDir: "assets",
+    emptyOutDir: true,
+
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+      },
+      output: {
+        // S'assure que le fichier d'entrée est bien indexé avec un hash unique
+        entryFileNames: "assets/[name]-[hash].js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash][extname]",
+      },
     },
   },
 }));
